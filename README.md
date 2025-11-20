@@ -101,19 +101,28 @@ A comprehensive **Procure-to-Pay** system with Django REST API backend and React
 3. **Access the applications**
    - 🌐 **Frontend**: http://localhost:3000
    - 🔧 **Backend API**: http://localhost:8000
-   - 📚 **API Documentation**: http://localhost:8000/swagger/
+   - 📚 **Swagger UI**: http://localhost:8000/swagger/
+   - 📖 **ReDoc**: http://localhost:8000/redoc/
+   - 🔗 **API Schema**: http://localhost:8000/swagger.json
 
-### ⚙️ Initial Setup
+## 🌐 Live Demo
 
-1. **Create superuser**
-   ```bash
-   docker-compose exec backend python manage.py createsuperuser
-   ```
+**Frontend Application**: https://procure-to-pay-system.vercel.app/
 
-2. **Run database migrations**
-   ```bash
-   docker-compose exec backend python manage.py migrate
-   ```
+### ⚙️ Demo Users (Auto-created)
+
+| Role | Username | Password | Capabilities |
+|------|----------|----------|-------------|
+| **Staff** | `staff1` | `password123` | Create requests, submit receipts |
+| **Approver L1** | `approver1` | `password123` | First-level approvals |
+| **Approver L2** | `approver2` | `password123` | Final approvals, PO generation |
+| **Finance** | `finance1` | `password123` | View all requests, reports |
+
+### 🧪 Test the API
+
+```bash
+python3 test_api.py
+```
 
 ## 📡 API Endpoints
 
@@ -124,10 +133,14 @@ A comprehensive **Procure-to-Pay** system with Django REST API backend and React
 | `GET` | `/api/requests/` | List requests (role-filtered) | Authenticated |
 | `POST` | `/api/requests/` | Create new request | Staff |
 | `GET` | `/api/requests/{id}/` | Get request details | Authenticated |
+| `PUT` | `/api/requests/{id}/` | Update request | Staff (pending only) |
 | `PATCH` | `/api/requests/{id}/approve/` | Approve request | Approvers |
 | `PATCH` | `/api/requests/{id}/reject/` | Reject request | Approvers |
-| `POST` | `/api/requests/{id}/submit_receipt/` | Submit receipt | Staff |
+| `POST` | `/api/requests/{id}/submit-receipt/` | Submit receipt | Staff |
 | `POST` | `/api/documents/process/` | Process document | Authenticated |
+
+**📖 Complete API Documentation**: [API_DOCUMENTATION.md](API_DOCUMENTATION.md)  
+**🔧 Swagger Documentation**: [SWAGGER_ENDPOINTS.md](SWAGGER_ENDPOINTS.md)
 
 ## 👥 User Roles & Permissions
 
@@ -161,34 +174,36 @@ graph TD
 4. 🏁 Final approval triggers automatic PO generation
 5. 🧾 Staff submits receipt for validation
 
-## 🔧 Configuration
+## ✨ Implementation Highlights
 
-### Environment Variables
+### 🔒 **Security & Authentication**
+- JWT-based authentication with refresh tokens
+- Role-based access control (RBAC)
+- Secure file uploads with validation
+- CORS protection
 
-Create `.env` file in the `backend/` directory:
+### 🔄 **Business Logic**
+- **Multi-level approval workflow**: Level 1 → Level 2 → Approved
+- **Immutable status**: Once approved/rejected, cannot be changed
+- **Automatic PO generation**: Triggered on final approval
+- **Concurrent safety**: Database transactions prevent race conditions
 
-```env
-# Django Settings
-SECRET_KEY=your-secret-key-here
-DEBUG=True
-ALLOWED_HOSTS=localhost,127.0.0.1
+### 🤖 **AI Integration**
+- **OCR Processing**: Extract text from images using pytesseract
+- **PDF Processing**: Extract data from PDF documents
+- **OpenAI Integration**: Intelligent data extraction from documents
+- **Receipt Validation**: Compare receipts against purchase orders
 
-# Database
-DB_NAME=procure_to_pay
-DB_USER=postgres
-DB_PASSWORD=postgres
-DB_HOST=db
-DB_PORT=5432
+### 📊 **Data Models**
+- **User**: Extended with roles and departments
+- **PurchaseRequest**: Core entity with file attachments
+- **RequestItem**: Line items for detailed tracking
+- **Approval**: Multi-level approval tracking
+- **DocumentProcessing**: AI extraction results
 
-# Redis
-REDIS_URL=redis://redis:6379
+### 🔧 Configuration
 
-# AI Services
-OPENAI_API_KEY=your-openai-api-key
-
-# CORS (for frontend)
-CORS_ALLOWED_ORIGINS=http://localhost:3000
-```
+See [DEPLOYMENT.md](DEPLOYMENT.md) for complete environment setup.
 
 ## 💻 Development
 
@@ -199,6 +214,7 @@ python -m venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
 pip install -r requirements.txt
 python manage.py migrate
+python manage.py create_demo_users
 python manage.py runserver
 ```
 
@@ -209,33 +225,33 @@ npm install
 npm start
 ```
 
-### Running Tests
+### API Testing
 ```bash
-# Backend tests
-docker-compose exec backend python manage.py test
+# Automated API tests
+python3 test_api.py
 
-# Frontend tests
-docker-compose exec frontend npm test
+# Manual testing with curl
+curl -X POST http://localhost:8000/api/auth/login/ \
+  -H "Content-Type: application/json" \
+  -d '{"username": "staff1", "password": "password123"}'
 ```
 
 ## 🚀 Deployment
 
-The system is containerized and ready for deployment on:
+### Production Deployment
+```bash
+# Production with nginx load balancer
+docker-compose -f docker-compose.prod.yml up --build -d
+```
 
+### Cloud Platforms
 - ☁️ **AWS EC2** - Full control VPS
 - 🌐 **Render** - Easy deployment
 - ✈️ **Fly.io** - Global edge deployment
 - 🌊 **DigitalOcean** - Developer-friendly VPS
 - 🐳 **Any Docker-compatible platform**
 
-### Production Deployment
-```bash
-# Set production environment
-export DJANGO_SETTINGS_MODULE=procure_to_pay.settings.production
-
-# Build and deploy
-docker-compose -f docker-compose.prod.yml up --build -d
-```
+**📖 Complete Deployment Guide**: [DEPLOYMENT.md](DEPLOYMENT.md)
 
 ## 🤝 Contributing
 
@@ -245,12 +261,20 @@ docker-compose -f docker-compose.prod.yml up --build -d
 4. Push to the branch (`git push origin feature/AmazingFeature`)
 5. Open a Pull Request
 
-## 📞 Support
+## 📞 Support & Documentation
 
-If you have any questions or need help, please:
-- 📧 Open an issue on GitHub
-- 💬 Start a discussion
-- 📖 Check the [documentation](https://github.com/manziosee/procure-to-pay-system/wiki)
+- 📚 **[API Documentation](API_DOCUMENTATION.md)** - Complete API reference
+- 🔧 **[Swagger Documentation](SWAGGER_ENDPOINTS.md)** - Interactive API docs
+- 🚀 **[Deployment Guide](DEPLOYMENT.md)** - Production deployment instructions
+- 🧪 **[Test Script](test_api.py)** - Automated API testing
+- 📧 **Issues**: Open an issue on GitHub
+- 💬 **Discussions**: Start a discussion for questions
+
+## 🔧 Interactive API Testing
+
+- **Swagger UI**: http://localhost:8000/swagger/ - Interactive API documentation
+- **ReDoc**: http://localhost:8000/redoc/ - Clean API documentation
+- **JSON Schema**: http://localhost:8000/swagger.json - OpenAPI specification
 
 
 ---

@@ -1,9 +1,52 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
+from rest_framework.permissions import IsAuthenticated
+from drf_yasg.utils import swagger_auto_schema
+from drf_yasg import openapi
 from .services import DocumentProcessor
 
 class ProcessDocumentView(APIView):
+    permission_classes = [IsAuthenticated]
+    
+    @swagger_auto_schema(
+        operation_description="Process document using AI/OCR to extract structured data",
+        manual_parameters=[
+            openapi.Parameter(
+                'document',
+                openapi.IN_FORM,
+                description="Document file (PDF, JPG, PNG)",
+                type=openapi.TYPE_FILE,
+                required=True
+            ),
+            openapi.Parameter(
+                'type',
+                openapi.IN_FORM,
+                description="Document type",
+                type=openapi.TYPE_STRING,
+                enum=['proforma', 'receipt'],
+                required=True
+            )
+        ],
+        responses={
+            200: openapi.Response(
+                description="Document processed successfully",
+                examples={
+                    "application/json": {
+                        "extracted_data": {
+                            "vendor": "Office Depot",
+                            "total_amount": "1500.00",
+                            "items": [],
+                            "terms": "Net 30"
+                        }
+                    }
+                }
+            ),
+            400: "Bad request - missing file or invalid type",
+            500: "Document processing failed"
+        },
+        tags=['Documents']
+    )
     def post(self, request):
         file = request.FILES.get('document')
         doc_type = request.data.get('type')
@@ -23,7 +66,10 @@ class ProcessDocumentView(APIView):
                 return Response({'error': 'Invalid document type'}, 
                               status=status.HTTP_400_BAD_REQUEST)
             
-            return Response({'extracted_data': data})
+            return Response({
+                'message': 'Document processed successfully',
+                'extracted_data': data
+            })
         except Exception as e:
             return Response({'error': str(e)}, 
                           status=status.HTTP_500_INTERNAL_SERVER_ERROR)
