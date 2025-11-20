@@ -1,88 +1,90 @@
-import React from 'react';
+import { Link } from 'react-router-dom';
+import { Eye } from 'lucide-react';
+import { PurchaseRequest } from '@/types';
+import { formatCurrency, formatDate, formatStatus } from '@/utils/formatters';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import {
   Table,
   TableBody,
   TableCell,
-  TableContainer,
   TableHead,
+  TableHeader,
   TableRow,
-  Paper,
-  Chip,
-  Button,
-  CircularProgress,
-  Box
-} from '@mui/material';
-import { Link } from 'react-router-dom';
-import { PurchaseRequest } from '../types';
+} from '@/components/ui/table';
+import { Card } from '@/components/ui/card';
+import { cn } from '@/lib/utils';
 
 interface RequestListProps {
   requests?: PurchaseRequest[];
   loading: boolean;
 }
 
-const RequestList: React.FC<RequestListProps> = ({ requests, loading }) => {
+export default function RequestList({ requests, loading }: RequestListProps) {
   if (loading) {
     return (
-      <Box display="flex" justifyContent="center" p={3}>
-        <CircularProgress />
-      </Box>
+      <Card className="p-8 border-gray-200">
+        <div className="flex justify-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-black"></div>
+        </div>
+      </Card>
     );
   }
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'pending': return 'warning';
-      case 'approved': return 'success';
-      case 'rejected': return 'error';
-      default: return 'default';
-    }
+  if (!requests || requests.length === 0) {
+    return (
+      <Card className="p-8 border-gray-200">
+        <p className="text-center text-gray-600">No requests found</p>
+      </Card>
+    );
+  }
+
+  const getStatusBadge = (status: string) => {
+    const styles = {
+      pending: 'bg-yellow-100 text-yellow-800 border border-yellow-300',
+      approved: 'bg-green-100 text-green-800 border border-green-300',
+      rejected: 'bg-red-100 text-red-800 border border-red-300',
+    };
+    return styles[status as keyof typeof styles] || 'bg-gray-100 text-gray-800 border border-gray-300';
   };
 
   return (
-    <TableContainer component={Paper}>
+    <Card className="border-gray-200">
       <Table>
-        <TableHead>
+        <TableHeader>
           <TableRow>
-            <TableCell>Title</TableCell>
-            <TableCell>Amount</TableCell>
-            <TableCell>Status</TableCell>
-            <TableCell>Created By</TableCell>
-            <TableCell>Created At</TableCell>
-            <TableCell>Actions</TableCell>
+            <TableHead className="text-black">Title</TableHead>
+            <TableHead className="text-black">Amount</TableHead>
+            <TableHead className="text-black">Status</TableHead>
+            <TableHead className="text-black">Created By</TableHead>
+            <TableHead className="text-black">Created At</TableHead>
+            <TableHead className="text-right text-black">Actions</TableHead>
           </TableRow>
-        </TableHead>
+        </TableHeader>
         <TableBody>
-          {requests?.map((request) => (
-            <TableRow key={request.id}>
-              <TableCell>{request.title}</TableCell>
-              <TableCell>${request.amount}</TableCell>
+          {requests.map((request) => (
+            <TableRow key={request.id} className="hover:bg-gray-50 transition-colors duration-200">
+              <TableCell className="font-medium text-black">{request.title}</TableCell>
+              <TableCell className="text-black">{formatCurrency(request.amount)}</TableCell>
               <TableCell>
-                <Chip 
-                  label={request.status.toUpperCase()} 
-                  color={getStatusColor(request.status)}
-                  size="small"
-                />
+                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusBadge(request.status)}`}>
+                  {formatStatus(request.status)}
+                </span>
               </TableCell>
-              <TableCell>{request.created_by_name}</TableCell>
-              <TableCell>
-                {new Date(request.created_at).toLocaleDateString()}
-              </TableCell>
-              <TableCell>
-                <Button
-                  component={Link}
-                  to={`/requests/${request.id}`}
-                  size="small"
-                  variant="outlined"
-                >
-                  View
+              <TableCell className="text-black">{request.created_by_name}</TableCell>
+              <TableCell className="text-black">{formatDate(request.created_at)}</TableCell>
+              <TableCell className="text-right">
+                <Button asChild variant="ghost" size="sm" className="hover:bg-gray-100">
+                  <Link to={`/requests/${request.id}`}>
+                    <Eye className="mr-2 h-4 w-4" />
+                    View
+                  </Link>
                 </Button>
               </TableCell>
             </TableRow>
           ))}
         </TableBody>
       </Table>
-    </TableContainer>
+    </Card>
   );
-};
-
-export default RequestList;
+}
