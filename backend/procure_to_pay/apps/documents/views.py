@@ -11,28 +11,27 @@ class ProcessDocumentView(APIView):
     
     @swagger_auto_schema(
         operation_description="Process document using AI/OCR to extract structured data",
-        manual_parameters=[
-            openapi.Parameter(
-                'document',
-                openapi.IN_FORM,
-                description="Document file (PDF, JPG, PNG)",
-                type=openapi.TYPE_FILE,
-                required=True
-            ),
-            openapi.Parameter(
-                'type',
-                openapi.IN_FORM,
-                description="Document type",
-                type=openapi.TYPE_STRING,
-                enum=['proforma', 'receipt'],
-                required=True
-            )
-        ],
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={
+                'document': openapi.Schema(
+                    type=openapi.TYPE_FILE,
+                    description="Document file (PDF, JPG, PNG)"
+                ),
+                'type': openapi.Schema(
+                    type=openapi.TYPE_STRING,
+                    enum=['proforma', 'receipt'],
+                    description="Document type"
+                )
+            },
+            required=['document', 'type']
+        ),
         responses={
             200: openapi.Response(
                 description="Document processed successfully",
                 examples={
                     "application/json": {
+                        "message": "Document processed successfully",
                         "extracted_data": {
                             "vendor": "Office Depot",
                             "total_amount": "1500.00",

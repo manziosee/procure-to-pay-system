@@ -233,15 +233,16 @@ class PurchaseRequestViewSet(ModelViewSet):
     @swagger_auto_schema(
         method='post',
         operation_description="Submit receipt for approved request (Staff only)",
-        manual_parameters=[
-            openapi.Parameter(
-                'receipt',
-                openapi.IN_FORM,
-                description="Receipt file (PDF, JPG, PNG)",
-                type=openapi.TYPE_FILE,
-                required=True
-            )
-        ],
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={
+                'receipt': openapi.Schema(
+                    type=openapi.TYPE_FILE,
+                    description="Receipt file (PDF, JPG, PNG)"
+                )
+            },
+            required=['receipt']
+        ),
         responses={
             200: openapi.Response(
                 description="Receipt submitted and validated",
