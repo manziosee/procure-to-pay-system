@@ -30,9 +30,12 @@ RUN mkdir -p /app/staticfiles /app/media
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:8000/api/auth/login/ || exit 1
+    CMD curl -f http://localhost:8000/health/ || exit 1
 
 EXPOSE 8000
 
 # Default command for development
 CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
+
+# Production command (will be overridden by fly.toml)
+# CMD ["gunicorn", "procure_to_pay.wsgi:application", "--bind", "0.0.0.0:8000"]

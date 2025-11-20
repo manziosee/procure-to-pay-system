@@ -107,7 +107,10 @@ A comprehensive **Procure-to-Pay** system with Django REST API backend and React
 
 ## 🌐 Live Demo
 
-**Frontend Application**: https://procure-to-pay-system.vercel.app/
+**Frontend Application**: https://procure-to-pay-system.vercel.app/  
+**Backend API**: https://procure-to-pay-system.fly.dev/  
+**Swagger UI**: https://procure-to-pay-system.fly.dev/swagger/  
+**ReDoc**: https://procure-to-pay-system.fly.dev/redoc/
 
 ### ⚙️ Demo Users (Auto-created)
 
@@ -230,8 +233,13 @@ npm start
 # Automated API tests
 python3 test_api.py
 
-# Manual testing with curl
+# Manual testing with curl (Local)
 curl -X POST http://localhost:8000/api/auth/login/ \
+  -H "Content-Type: application/json" \
+  -d '{"username": "staff1", "password": "password123"}'
+
+# Manual testing with curl (Production)
+curl -X POST https://procure-to-pay-system.fly.dev/api/auth/login/ \
   -H "Content-Type: application/json" \
   -d '{"username": "staff1", "password": "password123"}'
 ```
@@ -272,9 +280,15 @@ docker-compose -f docker-compose.prod.yml up --build -d
 
 ## 🔧 Interactive API Testing
 
+### Local Development
 - **Swagger UI**: http://localhost:8000/swagger/ - Interactive API documentation
 - **ReDoc**: http://localhost:8000/redoc/ - Clean API documentation
 - **JSON Schema**: http://localhost:8000/swagger.json - OpenAPI specification
+
+### Production
+- **Swagger UI**: https://procure-to-pay-system.fly.dev/swagger/ - Interactive API documentation
+- **ReDoc**: https://procure-to-pay-system.fly.dev/redoc/ - Clean API documentation
+- **JSON Schema**: https://procure-to-pay-system.fly.dev/swagger.json - OpenAPI specification
 
 
 ---
