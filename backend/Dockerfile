@@ -34,8 +34,8 @@ HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
 
 EXPOSE 8000
 
+# Set default Django settings
+ENV DJANGO_SETTINGS_MODULE=procure_to_pay.settings.local
+
 # Default command for development
 CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
-
-# Production command (will be overridden by fly.toml)
-# CMD ["gunicorn", "procure_to_pay.wsgi:application", "--bind", "0.0.0.0:8000"]

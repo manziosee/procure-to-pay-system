@@ -64,6 +64,11 @@ class PurchaseRequestViewSet(ModelViewSet):
     
     def get_queryset(self):
         user = self.request.user
+        
+        # Handle swagger documentation generation
+        if getattr(self, 'swagger_fake_view', False) or not user.is_authenticated:
+            return PurchaseRequest.objects.none()
+            
         if user.role == 'staff':
             return PurchaseRequest.objects.filter(created_by=user)
         elif user.role in ['approver_level_1', 'approver_level_2']:

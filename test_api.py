@@ -9,7 +9,9 @@ import json
 import sys
 from pathlib import Path
 
-BASE_URL = "http://localhost:8000/api"
+# Configuration
+BASE_URL = "http://localhost:8000/api"  # Local development
+# BASE_URL = "https://procure-to-pay-backend.fly.dev/api"  # Production
 
 def test_authentication():
     """Test user authentication"""

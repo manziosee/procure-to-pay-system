@@ -7,6 +7,7 @@ ALLOWED_HOSTS = [
     'procure-to-pay-backend.fly.dev',
     'localhost',
     '127.0.0.1',
+    '*',  # Allow all hosts for Fly.io internal networking
 ]
 
 # Database for production (SQLite for simplicity on Fly.io)
