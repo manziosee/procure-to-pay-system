@@ -108,9 +108,10 @@ A comprehensive **Procure-to-Pay** system with Django REST API backend and React
 ## 🌐 Live Demo
 
 **Frontend Application**: https://procure-to-pay-system.vercel.app/  
-**Backend API**: https://procure-to-pay-system.fly.dev/  
-**Swagger UI**: https://procure-to-pay-system.fly.dev/swagger/  
-**ReDoc**: https://procure-to-pay-system.fly.dev/redoc/
+**Backend API**: https://procure-to-pay-backend.fly.dev/  
+**Swagger UI**: https://procure-to-pay-backend.fly.dev/swagger/  
+**ReDoc**: https://procure-to-pay-backend.fly.dev/redoc/  
+**Health Check**: https://procure-to-pay-backend.fly.dev/health/
 
 ### ⚙️ Demo Users (Auto-created)
 
@@ -230,8 +231,17 @@ npm start
 
 ### API Testing
 ```bash
-# Automated API tests
+# Local API tests
 python3 test_api.py
+
+# Production API tests
+python3 test_production_api.py
+
+# Docker build validation
+python3 VALIDATE_BUILD.py
+
+# Docker build testing
+./DOCKER_BUILD_TEST.sh
 
 # Manual testing with curl (Local)
 curl -X POST http://localhost:8000/api/auth/login/ \
@@ -239,17 +249,29 @@ curl -X POST http://localhost:8000/api/auth/login/ \
   -d '{"username": "staff1", "password": "password123"}'
 
 # Manual testing with curl (Production)
-curl -X POST https://procure-to-pay-system.fly.dev/api/auth/login/ \
+curl -X POST https://procure-to-pay-backend.fly.dev/api/auth/login/ \
   -H "Content-Type: application/json" \
   -d '{"username": "staff1", "password": "password123"}'
 ```
 
 ## 🚀 Deployment
 
+### Docker Development
+```bash
+# Development environment
+docker-compose up --build
+
+# Test Docker build
+./TEST_DOCKER.sh
+```
+
 ### Production Deployment
 ```bash
 # Production with nginx load balancer
 docker-compose -f docker-compose.prod.yml up --build -d
+
+# Validate before building
+python3 VALIDATE_BUILD.py
 ```
 
 ### Cloud Platforms
@@ -274,7 +296,11 @@ docker-compose -f docker-compose.prod.yml up --build -d
 - 📚 **[API Documentation](API_DOCUMENTATION.md)** - Complete API reference
 - 🔧 **[Swagger Documentation](SWAGGER_ENDPOINTS.md)** - Interactive API docs
 - 🚀 **[Deployment Guide](DEPLOYMENT.md)** - Production deployment instructions
-- 🧪 **[Test Script](test_api.py)** - Automated API testing
+- 🐳 **[Docker Guide](DOCKER_GUIDE.md)** - Complete Docker setup guide
+- 📊 **[Deployment Status](DEPLOYMENT_STATUS.md)** - Current deployment status
+- 🧪 **[Local API Tests](test_api.py)** - Local API testing
+- 🌐 **[Production API Tests](test_production_api.py)** - Live deployment testing
+- 🔍 **[Build Validation](VALIDATE_BUILD.py)** - Docker build validation
 - 📧 **Issues**: Open an issue on GitHub
 - 💬 **Discussions**: Start a discussion for questions
 
@@ -286,9 +312,9 @@ docker-compose -f docker-compose.prod.yml up --build -d
 - **JSON Schema**: http://localhost:8000/swagger.json - OpenAPI specification
 
 ### Production
-- **Swagger UI**: https://procure-to-pay-system.fly.dev/swagger/ - Interactive API documentation
-- **ReDoc**: https://procure-to-pay-system.fly.dev/redoc/ - Clean API documentation
-- **JSON Schema**: https://procure-to-pay-system.fly.dev/swagger.json - OpenAPI specification
+- **Swagger UI**: https://procure-to-pay-backend.fly.dev/swagger/ - Interactive API documentation
+- **ReDoc**: https://procure-to-pay-backend.fly.dev/redoc/ - Clean API documentation
+- **JSON Schema**: https://procure-to-pay-backend.fly.dev/swagger.json - OpenAPI specification
 
 
 ---

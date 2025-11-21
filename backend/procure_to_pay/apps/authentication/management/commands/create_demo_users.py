@@ -7,6 +7,12 @@ class Command(BaseCommand):
     help = 'Create demo users for testing'
 
     def handle(self, *args, **options):
+        try:
+            self.create_users()
+        except Exception as e:
+            self.stdout.write(self.style.WARNING(f'Demo users creation failed: {e}'))
+    
+    def create_users(self):
         users_data = [
             {
                 'username': 'staff1',
@@ -57,3 +63,5 @@ class Command(BaseCommand):
                 self.stdout.write(
                     self.style.WARNING(f'User already exists: {user.username}')
                 )
+        
+        self.stdout.write(self.style.SUCCESS('Demo users setup completed'))
