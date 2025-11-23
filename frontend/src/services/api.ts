@@ -1,8 +1,8 @@
-import axios from 'axios';
+import axios, { AxiosInstance, InternalAxiosRequestConfig, AxiosResponse } from 'axios';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
+const API_URL = 'https://procure-to-pay-backend.fly.dev/api';
 
-const api = axios.create({
+const api: AxiosInstance = axios.create({
   baseURL: API_URL,
   headers: {
     'Content-Type': 'application/json',
@@ -12,10 +12,10 @@ const api = axios.create({
 
 // Request interceptor to add auth token to requests
 api.interceptors.request.use(
-  (config) => {
+  (config: InternalAxiosRequestConfig) => {
     const token = localStorage.getItem('token');
     if (token) {
-      config.headers.Authorization = `Token ${token}`;
+      config.headers.Authorization = `Bearer ${token}`;
     }
     return config;
   },
@@ -26,7 +26,7 @@ api.interceptors.request.use(
 
 // Response interceptor for error handling
 api.interceptors.response.use(
-  (response) => response,
+  (response: AxiosResponse) => response,
   (error) => {
     if (error.response?.status === 401) {
       // Handle unauthorized
@@ -37,24 +37,58 @@ api.interceptors.response.use(
   }
 );
 
+// Auth API
 export const auth = {
-  login: (email: string, password: string) =>
-    api.post('/auth/login/', { email, password }),
-  register: (userData: any) => api.post('/auth/register/', userData),
-  getMe: () => api.get('/auth/me/'),
+  login: (credentials: { username: string; password: string }) => 
+    api.post('/auth/login/', credentials).then((res) => {
+      if (res.data.access) {
+        localStorage.setItem('token', res.data.access);
+      }
+      return res.data;
+    }),
+
+  refreshToken: (refresh: string) => 
+    api.post('/auth/refresh/', { refresh }),
+
+  getProfile: () => api.get('/auth/profile/'),
+
+  logout: () => {
+    localStorage.removeItem('token');
+    return Promise.resolve();
+  }
 };
 
+// Purchase Requests API
 export const purchaseRequests = {
+  // Create a new purchase request with file upload support
   create: (data: FormData) => api.post('/requests/', data, {
     headers: {
       'Content-Type': 'multipart/form-data',
     },
   }),
+
+  // Get all purchase requests with optional query params
   getAll: (params = {}) => api.get('/requests/', { params }),
+
+  // Get a single purchase request by ID
   getById: (id: string) => api.get(`/requests/${id}/`),
+
+  // Update a purchase request
   update: (id: string, data: any) => api.put(`/requests/${id}/`, data),
+
+  // Partially update a purchase request
+  partialUpdate: (id: string, data: any) => api.patch(`/requests/${id}/`, data),
+
+  // Delete a purchase request
+  delete: (id: string) => api.delete(`/requests/${id}/`),
+
+  // Approve a purchase request
   approve: (id: string) => api.patch(`/requests/${id}/approve/`),
+
+  // Reject a purchase request with a reason
   reject: (id: string, reason: string) => api.patch(`/requests/${id}/reject/`, { reason }),
+
+  // Submit a receipt for a purchase request
   submitReceipt: (id: string, file: File) => {
     const formData = new FormData();
     formData.append('receipt', file);
@@ -63,12 +97,30 @@ export const purchaseRequests = {
         'Content-Type': 'multipart/form-data',
       },
     });
-  },
+  }
 };
 
-export const users = {
-  getAll: () => api.get('/users/'),
-  getApprovers: () => api.get('/users/?role__in=approver-level-1,approver-level-2'),
+// Documents API
+export const documents = {
+  // Process a document
+  process: (file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return api.post('/documents/process/', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+  }
 };
 
-export default api;
+// API Root
+export const getApiRoot = () => api.get('/');
+
+// Export all API services
+export default {
+  auth,
+  purchaseRequests,
+  documents,
+  getApiRoot
+};
