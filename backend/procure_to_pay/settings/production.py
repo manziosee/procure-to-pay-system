@@ -7,10 +7,9 @@ ALLOWED_HOSTS = [
     'procure-to-pay-backend.fly.dev',
     'localhost',
     '127.0.0.1',
-    '*',  # Allow all hosts for Fly.io internal networking
 ]
 
-# Database for production (SQLite for simplicity on Fly.io)
+# Database for production (SQLite for Fly.io, PostgreSQL for local)
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
@@ -37,6 +36,10 @@ CORS_ALLOW_CREDENTIALS = True
 SECURE_BROWSER_XSS_FILTER = True
 SECURE_CONTENT_TYPE_NOSNIFF = True
 X_FRAME_OPTIONS = 'DENY'
+# Disable SSL redirect for Fly.io (handles SSL at proxy level)
+SECURE_SSL_REDIRECT = False
+SESSION_COOKIE_SECURE = True
+CSRF_COOKIE_SECURE = True
 
 # Logging
 LOGGING = {

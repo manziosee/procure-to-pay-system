@@ -24,6 +24,9 @@ RUN apt-get update && apt-get install -y \
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
+# Install additional security packages
+RUN pip install --no-cache-dir bleach django-extensions
+
 # Copy application code
 COPY . .
 
@@ -38,6 +41,10 @@ EXPOSE 8000
 
 # Set default Django settings
 ENV DJANGO_SETTINGS_MODULE=procure_to_pay.settings.local
+
+# Security environment variables
+ENV PYTHONHASHSEED=random
+ENV PYTHONPATH=/app
 
 # Default command for development
 CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]

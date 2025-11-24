@@ -1,15 +1,7 @@
 version: '3.8'
 
 services:
-  db:
-    image: postgres:15
-    environment:
-      POSTGRES_DB: ${DB_NAME:-procure_to_pay}
-      POSTGRES_USER: ${DB_USER:-postgres}
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    restart: unless-stopped
+  # Using Supabase PostgreSQL - no local db needed
 
   redis:
     image: redis:7-alpine
@@ -21,10 +13,10 @@ services:
       - DEBUG=${DEBUG:-False}
       - SECRET_KEY=${SECRET_KEY:-django-insecure-_dbg@2u6fv$$(n3slh^if%6j1c@52f7a^g@0b74mhrko!_6tmlu}
       - ALLOWED_HOSTS=${ALLOWED_HOSTS:-localhost,nginx}
-      - DB_NAME=${DB_NAME:-procure_to_pay}
+      - DB_NAME=${DB_NAME:-postgres}
       - DB_USER=${DB_USER:-postgres}
-      - DB_PASSWORD=${DB_PASSWORD:-postgres}
-      - DB_HOST=db
+      - DB_PASSWORD=${DB_PASSWORD:-67bC6ShcAyCknv?}
+      - DB_HOST=${DB_HOST:-db.jkxhrolkjbqmwntuarwf.supabase.co}
       - DB_PORT=5432
       - REDIS_URL=redis://redis:6379
       - OPENAI_API_KEY=${OPENAI_API_KEY}
@@ -33,7 +25,6 @@ services:
       - media_files:/app/media
       - static_files:/app/staticfiles
     depends_on:
-      - db
       - redis
     restart: unless-stopped
     command: >
@@ -65,6 +56,5 @@ services:
     restart: unless-stopped
 
 volumes:
-  postgres_data:
   media_files:
   static_files:

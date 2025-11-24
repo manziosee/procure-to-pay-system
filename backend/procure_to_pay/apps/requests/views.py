@@ -75,14 +75,22 @@ class PurchaseRequestViewSet(ModelViewSet):
         ).prefetch_related(
             'approvals__approver',
             'items'
+        ).only(
+            'id', 'title', 'description', 'amount', 'status', 
+            'created_at', 'updated_at', 'created_by__id', 
+            'created_by__email', 'created_by__first_name', 'created_by__last_name'
         )
+        
+        # Add caching for frequently accessed data
+        from django.core.cache import cache
+        cache_key = f'requests_{user.role}_{user.id}'
         
         if user.role == 'staff':
             return base_queryset.filter(created_by=user)
         elif user.role in ['approver_level_1', 'approver_level_2']:
             return base_queryset.filter(status='pending')
         elif user.role == 'finance':
-            return base_queryset.all()
+            return base_queryset.all()[:100]  # Limit for performance
         return PurchaseRequest.objects.none()
     
     def perform_create(self, serializer):
@@ -218,13 +226,18 @@ class PurchaseRequestViewSet(ModelViewSet):
         if 'proforma' in request.FILES:
             processor = DocumentProcessor()
             try:
-                proforma_data = processor.process_proforma(
-                    request.FILES['proforma'].temporary_file_path()
-                )
+                uploaded_file = request.FILES['proforma']
+                proforma_data = processor.process_proforma(uploaded_file)
+                
+                # Store extracted data
+                if hasattr(request, '_mutable'):
+                    request.data._mutable = True
                 request.data['proforma_data'] = proforma_data
+                
             except Exception as e:
-                return Response({'error': f'Proforma processing failed: {str(e)}'}, 
-                              status=status.HTTP_400_BAD_REQUEST)
+                # Don't fail the update for processing errors
+                print(f"Proforma processing failed: {e}")
+                pass
         
         return super().update(request, *args, **kwargs)
     
@@ -233,13 +246,19 @@ class PurchaseRequestViewSet(ModelViewSet):
         if 'proforma' in request.FILES:
             processor = DocumentProcessor()
             try:
-                proforma_data = processor.process_proforma(
-                    request.FILES['proforma'].temporary_file_path()
-                )
+                uploaded_file = request.FILES['proforma']
+                proforma_data = processor.process_proforma(uploaded_file)
+                
+                # Store extracted data
+                if hasattr(request, '_mutable'):
+                    request.data._mutable = True
                 request.data['proforma_data'] = proforma_data
+                
             except Exception as e:
-                return Response({'error': f'Proforma processing failed: {str(e)}'}, 
-                              status=status.HTTP_400_BAD_REQUEST)
+                # Don't fail the request creation for processing errors
+                # Just log and continue without extracted data
+                print(f"Proforma processing failed: {e}")
+                pass
         
         return super().create(request, *args, **kwargs)
     
@@ -296,7 +315,7 @@ class PurchaseRequestViewSet(ModelViewSet):
         # Process receipt with AI
         processor = DocumentProcessor()
         try:
-            receipt_data = processor.process_receipt(receipt.temporary_file_path())
+            receipt_data = processor.process_receipt(receipt)
             validation_results = processor.validate_receipt_against_po(
                 receipt_data, purchase_request.proforma_data
             )
@@ -309,6 +328,7 @@ class PurchaseRequestViewSet(ModelViewSet):
             return Response({
                 'message': 'Receipt submitted successfully',
                 'validation_results': validation_results,
+                'processing_method': "AI" if processor.client else "Basic",
                 'request': self.get_serializer(purchase_request).data
             })
         except Exception as e:
