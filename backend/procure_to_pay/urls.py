@@ -19,16 +19,9 @@ def root_view(request):
         'message': 'Welcome to Procure-to-Pay API',
         'endpoints': {
             'api': '/api/',
-            'docs': '/swagger/',
             'redoc': '/redoc/',
             'health': '/health/',
             'admin': '/admin/'
-        },
-        'demo_users': {
-            'staff': 'staff1 / password123',
-            'approver_l1': 'approver1 / password123',
-            'approver_l2': 'approver2 / password123',
-            'finance': 'finance1 / password123'
         }
     })
 
@@ -40,24 +33,53 @@ schema_view = get_schema_view(
         
 ## Features
 - JWT Authentication with role-based access
+- User registration and email-based login
 - Multi-level approval workflow
 - AI-powered document processing
+- Proforma upload and data extraction
 - Automatic PO generation
-- Receipt validation
+- Receipt validation with discrepancy detection
+
+## Authentication Endpoints
+- `POST /api/auth/register/` - Register new user
+- `POST /api/auth/login/` - Login with email/password
+- `GET /api/auth/profile/` - Get user profile
+- `POST /api/auth/refresh/` - Refresh JWT token
+
+## Purchase Request Endpoints
+- `GET /api/requests/` - List requests (role-filtered)
+- `POST /api/requests/` - Create new request
+- `GET /api/requests/{id}/` - Get request details
+- `PUT /api/requests/{id}/` - Update request
+- `PATCH /api/requests/{id}/approve/` - Approve request
+- `PATCH /api/requests/{id}/reject/` - Reject request
+- `POST /api/requests/{id}/submit-receipt/` - Submit receipt
+
+## Document Processing Endpoints
+- `POST /api/documents/process/` - Process any document
+- `POST /api/proforma/upload/` - Upload proforma invoice
+- `POST /api/proforma/{id}/generate-po/` - Generate PO from proforma
+- `POST /api/proforma/po/{id}/validate-receipt/` - Validate receipt against PO
 
 ## Demo Users
-- **Staff**: staff1 / password123
-- **Approver L1**: approver1 / password123  
-- **Approver L2**: approver2 / password123
-- **Finance**: finance1 / password123
+- **Staff**: staff1@example.com / password123
+- **Approver L1**: approver1@example.com / password123  
+- **Approver L2**: approver2@example.com / password123
+- **Finance**: finance1@example.com / password123
 
-## Workflow
-1. Staff creates request → Pending
-2. Approver L1 approves → Still Pending
-3. Approver L2 approves → Approved (PO generated)
-4. Any rejection → Rejected (final)
+## Complete Workflow
+1. **Registration**: User registers with email/password
+2. **Login**: User logs in with email to get JWT tokens
+3. **Proforma Upload**: Staff uploads proforma → AI extracts data
+4. **Request Creation**: Staff creates purchase request
+5. **Approval L1**: First approver reviews → Approves/Rejects
+6. **Approval L2**: Second approver reviews → Final decision
+7. **PO Generation**: Auto-generated on final approval
+8. **Receipt Upload**: Staff uploads receipt → Validated against PO
+9. **Discrepancy Detection**: System flags any mismatches
+
+View complete API documentation at /redoc/
         """,
-        terms_of_service="https://www.example.com/terms/",
         contact=openapi.Contact(email="admin@procure2pay.com"),
         license=openapi.License(name="MIT License"),
     ),
@@ -78,12 +100,11 @@ urlpatterns = [
     path('api/auth/', include('procure_to_pay.apps.authentication.urls')),
     path('api/', include('procure_to_pay.apps.requests.urls')),
     path('api/documents/', include('procure_to_pay.apps.documents.urls')),
+    path('api/proforma/', include('procure_to_pay.apps.documents.urls_new')),
     path('api/', include('procure_to_pay.apps.api.urls')),
     
     # API Documentation
     path('swagger.json', schema_view.without_ui(cache_timeout=0), name='schema-json'),
-    path('swagger/', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
-    path('docs/', schema_view.with_ui('swagger', cache_timeout=0), name='docs'),
     path('redoc/', schema_view.with_ui('redoc', cache_timeout=0), name='schema-redoc'),
 ]
 
