@@ -16,6 +16,8 @@ RUN apt-get update && apt-get install -y \
     libpq-dev \
     gcc \
     curl \
+    libmagic1 \
+    libmagic-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Python dependencies

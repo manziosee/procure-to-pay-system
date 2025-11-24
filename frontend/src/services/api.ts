@@ -27,11 +27,32 @@ api.interceptors.request.use(
 // Response interceptor for error handling
 api.interceptors.response.use(
   (response: AxiosResponse) => response,
-  (error) => {
-    if (error.response?.status === 401) {
-      // Handle unauthorized
-      localStorage.removeItem('token');
-      window.location.href = '/login';
+  async (error) => {
+    const originalRequest = error.config;
+    
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      originalRequest._retry = true;
+      
+      // Try to refresh token
+      const refreshToken = localStorage.getItem('refreshToken');
+      if (refreshToken) {
+        try {
+          const response = await api.post('/auth/refresh/', { refresh: refreshToken });
+          const newToken = response.data.access;
+          localStorage.setItem('token', newToken);
+          originalRequest.headers.Authorization = `Bearer ${newToken}`;
+          return api(originalRequest);
+        } catch (refreshError) {
+          // Refresh failed, redirect to login
+          localStorage.removeItem('token');
+          localStorage.removeItem('refreshToken');
+          window.location.href = '/login';
+        }
+      } else {
+        // No refresh token, redirect to login
+        localStorage.removeItem('token');
+        window.location.href = '/login';
+      }
     }
     return Promise.reject(error);
   }
@@ -43,6 +64,9 @@ export const auth = {
     api.post('/auth/login/', credentials).then((res) => {
       if (res.data.access) {
         localStorage.setItem('token', res.data.access);
+        if (res.data.refresh) {
+          localStorage.setItem('refreshToken', res.data.refresh);
+        }
       }
       return res.data;
     }),

@@ -2,6 +2,10 @@ from django.db import models
 from django.conf import settings
 from django.core.validators import MinValueValidator
 from django.core.exceptions import ValidationError
+from .validators import (
+    FileTypeValidator, SecureFilenameValidator, 
+    validate_amount, validate_title, validate_description
+)
 
 class PurchaseRequest(models.Model):
     STATUS_CHOICES = [
@@ -10,9 +14,12 @@ class PurchaseRequest(models.Model):
         ('rejected', 'Rejected'),
     ]
     
-    title = models.CharField(max_length=200)
-    description = models.TextField()
-    amount = models.DecimalField(max_digits=10, decimal_places=2, validators=[MinValueValidator(0)])
+    title = models.CharField(max_length=200, validators=[validate_title])
+    description = models.TextField(validators=[validate_description])
+    amount = models.DecimalField(
+        max_digits=10, decimal_places=2, 
+        validators=[MinValueValidator(0), validate_amount]
+    )
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='pending')
     
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='created_requests')
@@ -20,9 +27,18 @@ class PurchaseRequest(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     
-    proforma = models.FileField(upload_to='proformas/', null=True, blank=True)
-    purchase_order = models.FileField(upload_to='purchase_orders/', null=True, blank=True)
-    receipt = models.FileField(upload_to='receipts/', null=True, blank=True)
+    proforma = models.FileField(
+        upload_to='proformas/', null=True, blank=True,
+        validators=[FileTypeValidator('document'), SecureFilenameValidator()]
+    )
+    purchase_order = models.FileField(
+        upload_to='purchase_orders/', null=True, blank=True,
+        validators=[FileTypeValidator('pdf'), SecureFilenameValidator()]
+    )
+    receipt = models.FileField(
+        upload_to='receipts/', null=True, blank=True,
+        validators=[FileTypeValidator('document'), SecureFilenameValidator()]
+    )
     
     # AI extracted data
     proforma_data = models.JSONField(default=dict, blank=True)
@@ -31,6 +47,12 @@ class PurchaseRequest(models.Model):
     
     class Meta:
         ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['status', 'created_at']),
+            models.Index(fields=['created_by', 'status']),
+            models.Index(fields=['amount']),
+            models.Index(fields=['created_at']),
+        ]
     
     def clean(self):
         if self.status in ['approved', 'rejected'] and self.pk:
