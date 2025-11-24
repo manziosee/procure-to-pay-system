@@ -68,13 +68,21 @@ class PurchaseRequestViewSet(ModelViewSet):
         # Handle swagger documentation generation
         if getattr(self, 'swagger_fake_view', False) or not user.is_authenticated:
             return PurchaseRequest.objects.none()
-            
+        
+        # Optimize queries with select_related and prefetch_related
+        base_queryset = PurchaseRequest.objects.select_related(
+            'created_by'
+        ).prefetch_related(
+            'approvals__approver',
+            'items'
+        )
+        
         if user.role == 'staff':
-            return PurchaseRequest.objects.filter(created_by=user)
+            return base_queryset.filter(created_by=user)
         elif user.role in ['approver_level_1', 'approver_level_2']:
-            return PurchaseRequest.objects.filter(status='pending')
+            return base_queryset.filter(status='pending')
         elif user.role == 'finance':
-            return PurchaseRequest.objects.all()
+            return base_queryset.all()
         return PurchaseRequest.objects.none()
     
     def perform_create(self, serializer):
