@@ -10,9 +10,9 @@ class DocumentedTokenObtainPairView(TokenObtainPairView):
         operation_description="Authenticate user and obtain JWT tokens",
         request_body=openapi.Schema(
             type=openapi.TYPE_OBJECT,
-            required=['username', 'password'],
+            required=['email', 'password'],
             properties={
-                'username': openapi.Schema(type=openapi.TYPE_STRING, description='Username'),
+                'email': openapi.Schema(type=openapi.TYPE_STRING, description='Email address'),
                 'password': openapi.Schema(type=openapi.TYPE_STRING, description='Password'),
             },
         ),

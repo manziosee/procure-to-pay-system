@@ -11,6 +11,7 @@ import RequestDetail from './pages/RequestDetail';
 import Approvals from './pages/Approvals';
 import FinanceDashboard from './pages/FinanceDashboard';
 import TestLanding from './pages/TestLanding';
+import ApiTestComponent from './components/ApiTestComponent';
 import Unauthorized from './pages/Unauthorized';
 import Navbar from './components/Navbar';
 import { RoleBasedRoute } from './components/RoleBasedRoute';
@@ -28,6 +29,10 @@ class ErrorBoundary extends Component<
     return { hasError: true, error };
   }
 
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    console.error('ErrorBoundary caught an error:', error, errorInfo);
+  }
+
   render() {
     if (this.state.hasError) {
       return (
@@ -36,7 +41,7 @@ class ErrorBoundary extends Component<
             <h2 className="text-2xl font-bold text-black mb-4">Something went wrong</h2>
             <p className="text-gray-600 mb-4">Please try refreshing the page</p>
             <button 
-              onClick={() => window.location.reload()} 
+              onClick={() => globalThis.location.reload()} 
               className="bg-black text-white px-4 py-2 rounded hover:bg-gray-800"
             >
               Reload Page
@@ -50,7 +55,31 @@ class ErrorBoundary extends Component<
 }
 
 function App() {
-  const { user, loading } = useAuth();
+  let user, loading;
+  
+  try {
+    const authData = useAuth();
+    user = authData.user;
+    loading = authData.loading;
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+    console.error('Auth context error:', error);
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-white">
+        <div className="text-center p-8">
+          <h2 className="text-2xl font-bold text-red-600 mb-4">Authentication Error</h2>
+          <p className="text-gray-600 mb-4">There was an issue with the authentication system.</p>
+          <p className="text-sm text-gray-500 mb-4">Error: {errorMessage}</p>
+          <button 
+            onClick={() => globalThis.location.reload()} 
+            className="bg-black text-white px-4 py-2 rounded hover:bg-gray-800"
+          >
+            Reload Page
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   if (loading) {
     return (
@@ -62,14 +91,17 @@ function App() {
 
   if (!user) {
     return (
-      <Routes>
-        <Route path="/" element={<Landing />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
-        <Route path="/test" element={<TestLanding />} />
-        <Route path="/unauthorized" element={<Unauthorized />} />
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
+      <div>
+        <ApiTestComponent />
+        <Routes>
+          <Route path="/" element={<Landing />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+          <Route path="/test" element={<TestLanding />} />
+          <Route path="/unauthorized" element={<Unauthorized />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </div>
     );
   }
 

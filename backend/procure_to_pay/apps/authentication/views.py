@@ -34,17 +34,36 @@ class UserRegistrationView(APIView):
     def post(self, request):
         serializer = UserRegistrationSerializer(data=request.data)
         if serializer.is_valid():
-            user = serializer.save()
-            return Response({
-                'id': user.id,
-                'username': user.username,
-                'email': user.email,
-                'first_name': user.first_name,
-                'last_name': user.last_name,
-                'role': user.role,
-                'department': user.department
-            }, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            try:
+                user = serializer.save()
+                return Response({
+                    'id': user.id,
+                    'username': user.username,
+                    'email': user.email,
+                    'first_name': user.first_name,
+                    'last_name': user.last_name,
+                    'role': user.role,
+                    'department': user.department,
+                    'message': 'User registered successfully'
+                }, status=status.HTTP_201_CREATED)
+            except Exception as e:
+                return Response({
+                    'error': 'Registration failed',
+                    'detail': str(e)
+                }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Format validation errors for better user experience
+        formatted_errors = {}
+        for field, errors in serializer.errors.items():
+            if isinstance(errors, list):
+                formatted_errors[field] = errors[0] if errors else 'Invalid value'
+            else:
+                formatted_errors[field] = str(errors)
+        
+        return Response({
+            'error': 'Validation failed',
+            'details': formatted_errors
+        }, status=status.HTTP_400_BAD_REQUEST)
 
 class UserProfileView(APIView):
     permission_classes = [IsAuthenticated]

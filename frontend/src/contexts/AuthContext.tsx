@@ -31,18 +31,19 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   useEffect(() => {
     const initAuth = async () => {
-      const token = localStorage.getItem('token');
-      if (token) {
-        try {
+      try {
+        const token = localStorage.getItem('token');
+        if (token) {
           const response = await auth.getProfile();
           setUser(response.data);
-        } catch (error) {
-          console.warn('Failed to get profile:', error);
-          localStorage.removeItem('token');
-          localStorage.removeItem('refreshToken');
         }
+      } catch (error) {
+        console.warn('Failed to get profile:', error);
+        localStorage.removeItem('token');
+        localStorage.removeItem('refreshToken');
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     };
 
     initAuth();

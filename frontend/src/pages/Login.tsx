@@ -16,7 +16,7 @@ export default function Login() {
   const successMessage = location.state?.message;
   
   const [credentials, setCredentials] = useState<LoginCredentials>({ 
-    username: '', 
+    email: '', 
     password: '' 
   });
   const [error, setError] = useState<string>('');
@@ -81,13 +81,13 @@ export default function Login() {
               
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="space-y-2">
-                  <Label htmlFor="username" className="text-black font-medium">Username</Label>
+                  <Label htmlFor="email" className="text-black font-medium">Email</Label>
                   <Input
-                    id="username"
-                    type="text"
-                    placeholder="Enter your username"
-                    value={credentials.username}
-                    onChange={(e) => setCredentials({...credentials, username: e.target.value})}
+                    id="email"
+                    type="email"
+                    placeholder="Enter your email"
+                    value={credentials.email}
+                    onChange={(e) => setCredentials({...credentials, email: e.target.value})}
                     required
                     disabled={loading}
                     className="h-12 border-gray-300 focus:border-black focus:ring-black"

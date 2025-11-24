@@ -9,6 +9,7 @@ class User(AbstractUser):
         ('finance', 'Finance'),
     ]
     
+    username = models.CharField(max_length=150, unique=True)
     email = models.EmailField(unique=True)
     role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='staff')
     department = models.CharField(max_length=100, blank=True)

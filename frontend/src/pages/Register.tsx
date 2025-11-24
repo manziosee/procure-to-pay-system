@@ -23,30 +23,59 @@ export default function Register() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setFieldErrors({});
 
     if (formData.password !== formData.confirmPassword) {
       setError('Passwords do not match');
       return;
     }
 
-    if (formData.password.length < 6) {
-      setError('Password must be at least 6 characters long');
+    if (formData.password.length < 8) {
+      setError('Password must be at least 8 characters long');
       return;
     }
 
     setLoading(true);
     try {
-      // API call would go here
-      navigate('/login', { 
-        state: { message: 'Account created successfully! Please sign in.' }
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000/api'}/auth/register/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          username: formData.username,
+          email: formData.email,
+          password: formData.password,
+          password_confirm: formData.confirmPassword,
+          first_name: formData.first_name,
+          last_name: formData.last_name,
+          role: formData.role,
+          department: formData.department
+        }),
       });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        navigate('/login', { 
+          state: { message: 'Account created successfully! Please sign in with your new credentials.' }
+        });
+      } else {
+        if (data.details) {
+          setFieldErrors(data.details);
+          setError('Please fix the errors below');
+        } else {
+          setError(data.error || data.detail || 'Registration failed. Please try again.');
+        }
+      }
     } catch (err) {
-      setError('Registration failed. Please try again.');
+      setError('Network error. Please check your connection and try again.');
     } finally {
       setLoading(false);
     }

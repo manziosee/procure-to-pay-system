@@ -1,6 +1,6 @@
 import axios, { AxiosInstance, InternalAxiosRequestConfig, AxiosResponse } from 'axios';
 
-const API_URL = 'https://procure-to-pay-backend.fly.dev/api';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
 
 const api: AxiosInstance = axios.create({
   baseURL: API_URL,
@@ -72,7 +72,7 @@ export const auth = {
     }),
 
   register: (userData: { 
-    username: string; 
+    username?: string; 
     email: string; 
     first_name: string; 
     last_name: string; 
