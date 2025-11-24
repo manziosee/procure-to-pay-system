@@ -147,29 +147,7 @@ export default function Login() {
             </CardContent>
           </Card>
 
-          {/* Demo Credentials */}
-          <Card className="bg-gray-50 border border-gray-200 hover:shadow-lg transition-all duration-300">
-            <CardContent className="pt-6">
-              <div className="text-center mb-4">
-                <p className="text-lg font-semibold text-black mb-2">Demo Credentials</p>
-                <p className="text-sm text-gray-600">Try different user roles</p>
-              </div>
-              <div className="grid grid-cols-1 gap-3">
-                <div className="p-4 bg-white border border-gray-200 hover:border-black transition-all duration-300 hover:scale-105 transform">
-                  <p className="font-semibold text-black mb-1">Staff</p>
-                  <code className="text-sm bg-gray-100 px-3 py-1 border text-black hover:bg-black hover:text-white transition-all duration-300">staff / password</code>
-                </div>
-                <div className="p-4 bg-white border border-gray-200 hover:border-black transition-all duration-300 hover:scale-105 transform">
-                  <p className="font-semibold text-black mb-1">Approver</p>
-                  <code className="text-sm bg-gray-100 px-3 py-1 border text-black hover:bg-black hover:text-white transition-all duration-300">approver / password</code>
-                </div>
-                <div className="p-4 bg-white border border-gray-200 hover:border-black transition-all duration-300 hover:scale-105 transform">
-                  <p className="font-semibold text-black mb-1">Finance</p>
-                  <code className="text-sm bg-gray-100 px-3 py-1 border text-black hover:bg-black hover:text-white transition-all duration-300">finance / password</code>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+
 
           <div className="text-center">
             <p className="text-gray-600">

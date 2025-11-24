@@ -2,7 +2,7 @@ from django.urls import path
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
-from .views import UserProfileView
+from .views import UserProfileView, UserRegistrationView
 
 # Custom JWT views with Swagger documentation
 class DocumentedTokenObtainPairView(TokenObtainPairView):
@@ -62,5 +62,6 @@ class DocumentedTokenRefreshView(TokenRefreshView):
 urlpatterns = [
     path('login/', DocumentedTokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('refresh/', DocumentedTokenRefreshView.as_view(), name='token_refresh'),
+    path('register/', UserRegistrationView.as_view(), name='user_register'),
     path('profile/', UserProfileView.as_view(), name='user_profile'),
 ]

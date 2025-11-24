@@ -1,4 +1,5 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, ReactNode, useMemo } from 'react';
+import { auth } from '@/services/api';
 import type { User, LoginCredentials } from '@/types';
 
 interface AuthContextType {
@@ -22,85 +23,61 @@ interface AuthProviderProps {
   children: ReactNode;
 }
 
-// Mock users for demo
-const mockUsers: Record<string, User> = {
-  staff: {
-    id: 1,
-    username: 'staff',
-    email: 'staff@example.com',
-    first_name: 'John',
-    last_name: 'Staff',
-    role: 'staff',
-    department: 'Operations'
-  },
-  approver1: {
-    id: 2,
-    username: 'approver1',
-    email: 'approver1@example.com',
-    first_name: 'Jane',
-    last_name: 'Approver',
-    role: 'approver_level_1',
-    department: 'Management'
-  },
-  approver2: {
-    id: 3,
-    username: 'approver2',
-    email: 'approver2@example.com',
-    first_name: 'Bob',
-    last_name: 'Manager',
-    role: 'approver_level_2',
-    department: 'Management'
-  },
-  finance: {
-    id: 4,
-    username: 'finance',
-    email: 'finance@example.com',
-    first_name: 'Alice',
-    last_name: 'Finance',
-    role: 'finance',
-    department: 'Finance'
-  }
-};
+
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
-    // Simulate loading time
-    const timer = setTimeout(() => {
-      const savedUser = localStorage.getItem('currentUser');
-      if (savedUser) {
-        setUser(JSON.parse(savedUser));
+    const initAuth = async () => {
+      const token = localStorage.getItem('token');
+      if (token) {
+        try {
+          const response = await auth.getProfile();
+          setUser(response.data);
+        } catch (error) {
+          console.warn('Failed to get profile:', error);
+          localStorage.removeItem('token');
+          localStorage.removeItem('refreshToken');
+        }
       }
       setLoading(false);
-    }, 500);
+    };
 
-    return () => clearTimeout(timer);
+    initAuth();
   }, []);
 
   const login = async (credentials: LoginCredentials): Promise<User> => {
-    // Mock login - check if username exists in mockUsers
-    const mockUser = mockUsers[credentials.username];
-    if (mockUser && credentials.password === 'password') {
-      localStorage.setItem('currentUser', JSON.stringify(mockUser));
-      setUser(mockUser);
-      return mockUser;
+    try {
+      await auth.login(credentials);
+      const profileResponse = await auth.getProfile();
+      const userData = profileResponse.data;
+      setUser(userData);
+      return userData;
+    } catch (error: any) {
+      throw new Error(error.response?.data?.detail || 'Login failed');
     }
-    throw new Error('Invalid credentials');
   };
 
-  const logout = () => {
-    localStorage.removeItem('currentUser');
-    setUser(null);
+  const logout = async () => {
+    try {
+      await auth.logout();
+    } catch (error) {
+      console.warn('Logout error:', error);
+    } finally {
+      localStorage.removeItem('token');
+      localStorage.removeItem('refreshToken');
+      setUser(null);
+    }
   };
 
-  const value = {
+  const value = useMemo(() => ({
     user,
     login,
     logout,
     loading
-  };
+  }), [user, loading]);
 
   return (
     <AuthContext.Provider value={value}>

@@ -60,7 +60,7 @@ api.interceptors.response.use(
 
 // Auth API
 export const auth = {
-  login: (credentials: { username: string; password: string }) => 
+  login: (credentials: { email: string; password: string }) => 
     api.post('/auth/login/', credentials).then((res) => {
       if (res.data.access) {
         localStorage.setItem('token', res.data.access);
@@ -70,6 +70,17 @@ export const auth = {
       }
       return res.data;
     }),
+
+  register: (userData: { 
+    username: string; 
+    email: string; 
+    first_name: string; 
+    last_name: string; 
+    role: string;
+    department: string;
+    password: string; 
+    password_confirm: string; 
+  }) => api.post('/auth/register/', userData),
 
   refreshToken: (refresh: string) => 
     api.post('/auth/refresh/', { refresh }),
@@ -85,11 +96,14 @@ export const auth = {
 // Purchase Requests API
 export const purchaseRequests = {
   // Create a new purchase request with file upload support
-  create: (data: FormData) => api.post('/requests/', data, {
-    headers: {
-      'Content-Type': 'multipart/form-data',
-    },
-  }),
+  create: (data: FormData) => {
+    // Remove Content-Type header to let axios set it with boundary
+    return api.post('/requests/', data, {
+      headers: {
+        // Let axios set the Content-Type with boundary for multipart
+      },
+    });
+  },
 
   // Get all purchase requests with optional query params
   getAll: (params = {}) => api.get('/requests/', { params }),
@@ -116,11 +130,7 @@ export const purchaseRequests = {
   submitReceipt: (id: string, file: File) => {
     const formData = new FormData();
     formData.append('receipt', file);
-    return api.post(`/requests/${id}/submit-receipt/`, formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    });
+    return api.post(`/requests/${id}/submit-receipt/`, formData);
   }
 };
 
@@ -130,11 +140,7 @@ export const documents = {
   process: (file: File) => {
     const formData = new FormData();
     formData.append('file', file);
-    return api.post('/documents/process/', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    });
+    return api.post('/documents/process/', formData);
   }
 };
 
