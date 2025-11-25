@@ -108,10 +108,10 @@ A comprehensive **Procure-to-Pay** system with Django REST API backend and React
 ## 🌐 Live Demo
 
 **Frontend Application**: https://procure-to-pay-system.vercel.app/  
-**Backend API**: https://procure-to-pay-backend.fly.dev/  
-**Swagger UI**: https://procure-to-pay-backend.fly.dev/swagger/  
-**ReDoc**: https://procure-to-pay-backend.fly.dev/redoc/  
-**Health Check**: https://procure-to-pay-backend.fly.dev/health/
+**Backend API**: https://procure-to-pay-system-xnwp.onrender.com/  
+**Swagger UI**: https://procure-to-pay-system-xnwp.onrender.com/api/docs/  
+**ReDoc**: https://procure-to-pay-system-xnwp.onrender.com/api/redoc/  
+**Health Check**: https://procure-to-pay-system-xnwp.onrender.com/health/
 
 ### ⚙️ Demo Users (Auto-created)
 
@@ -312,9 +312,9 @@ python3 VALIDATE_BUILD.py
 - **JSON Schema**: http://localhost:8000/swagger.json - OpenAPI specification
 
 ### Production
-- **Swagger UI**: https://procure-to-pay-backend.fly.dev/swagger/ - Interactive API documentation
-- **ReDoc**: https://procure-to-pay-backend.fly.dev/redoc/ - Clean API documentation
-- **JSON Schema**: https://procure-to-pay-backend.fly.dev/swagger.json - OpenAPI specification
+- **Swagger UI**: https://procure-to-pay-system-xnwp.onrender.com/api/docs/ - Interactive API documentation
+- **ReDoc**: https://procure-to-pay-system-xnwp.onrender.com/api/redoc/ - Clean API documentation
+- **JSON Schema**: https://procure-to-pay-system-xnwp.onrender.com/api/schema/ - OpenAPI specification
 
 
 ---

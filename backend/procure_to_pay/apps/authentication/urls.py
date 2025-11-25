@@ -1,30 +1,11 @@
 from django.urls import path
 from rest_framework_simplejwt.views import TokenRefreshView
-from drf_yasg.utils import swagger_auto_schema
-from drf_yasg import openapi
+from drf_spectacular.utils import extend_schema
 from .views import RegisterView, LoginView, LogoutView, UserProfileView
 
 class DocumentedTokenRefreshView(TokenRefreshView):
-    @swagger_auto_schema(
-        operation_description="Refresh JWT access token using refresh token",
-        request_body=openapi.Schema(
-            type=openapi.TYPE_OBJECT,
-            required=['refresh'],
-            properties={
-                'refresh': openapi.Schema(type=openapi.TYPE_STRING, description='Refresh token'),
-            },
-        ),
-        responses={
-            200: openapi.Response(
-                description="Token refreshed successfully",
-                examples={
-                    "application/json": {
-                        "access": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9..."
-                    }
-                }
-            ),
-            401: "Invalid or expired refresh token"
-        },
+    @extend_schema(
+        description="Refresh JWT access token using refresh token",
         tags=['Authentication']
     )
     def post(self, request, *args, **kwargs):
