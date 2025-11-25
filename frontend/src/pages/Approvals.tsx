@@ -8,6 +8,9 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
 import {
   Table,
   TableBody,
@@ -108,6 +111,44 @@ export default function Approvals() {
     }
   };
 
+  const [selectedRequest, setSelectedRequest] = useState<PurchaseRequest | null>(null);
+  const [rejectReason, setRejectReason] = useState('');
+  const [approveDialogOpen, setApproveDialogOpen] = useState(false);
+  const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
+
+  const handleApprove = async (request: PurchaseRequest) => {
+    try {
+      console.log('Approving request:', request.id);
+      // Here you would call the API
+      // await purchaseRequests.approve(request.id);
+      alert('Request approved successfully!');
+      setApproveDialogOpen(false);
+      setSelectedRequest(null);
+    } catch (error) {
+      console.error('Error approving request:', error);
+      alert('Failed to approve request');
+    }
+  };
+
+  const handleReject = async (request: PurchaseRequest) => {
+    if (!rejectReason.trim()) {
+      alert('Please provide a reason for rejection');
+      return;
+    }
+    try {
+      console.log('Rejecting request:', request.id, 'Reason:', rejectReason);
+      // Here you would call the API
+      // await purchaseRequests.reject(request.id, rejectReason);
+      alert('Request rejected successfully!');
+      setRejectDialogOpen(false);
+      setSelectedRequest(null);
+      setRejectReason('');
+    } catch (error) {
+      console.error('Error rejecting request:', error);
+      alert('Failed to reject request');
+    }
+  };
+
   const RequestTable = ({ requests, showActions = false }: { requests: PurchaseRequest[], showActions?: boolean }) => (
     <Card className="border-gray-200">
       <Table>
@@ -143,29 +184,83 @@ export default function Approvals() {
                   </Button>
                   {showActions && request.status === 'pending' && (
                     <>
-                      <Button 
-                        size="sm" 
-                        className="bg-green-600 text-white hover:bg-green-700 transition-all duration-300 hover:scale-105"
-                        onClick={() => {
-                          console.log('Approving request:', request.id);
-                          alert('Request approved!');
-                        }}
-                      >
-                        <CheckCircle className="mr-1 h-4 w-4" />
-                        Approve
-                      </Button>
-                      <Button 
-                        size="sm" 
-                        variant="destructive"
-                        className="transition-all duration-300 hover:scale-105"
-                        onClick={() => {
-                          console.log('Rejecting request:', request.id);
-                          alert('Request rejected!');
-                        }}
-                      >
-                        <XCircle className="mr-1 h-4 w-4" />
-                        Reject
-                      </Button>
+                      <Dialog open={approveDialogOpen} onOpenChange={setApproveDialogOpen}>
+                        <DialogTrigger asChild>
+                          <Button 
+                            size="sm" 
+                            className="bg-green-600 text-white hover:bg-green-700 transition-all duration-300 hover:scale-105"
+                            onClick={() => setSelectedRequest(request)}
+                          >
+                            <CheckCircle className="mr-1 h-4 w-4" />
+                            Approve
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent className="bg-white border border-gray-300 shadow-xl">
+                          <DialogHeader>
+                            <DialogTitle className="text-black">Approve Request</DialogTitle>
+                            <DialogDescription className="text-gray-600">
+                              Are you sure you want to approve "{selectedRequest?.title}"?
+                            </DialogDescription>
+                          </DialogHeader>
+                          <DialogFooter>
+                            <Button variant="outline" onClick={() => setApproveDialogOpen(false)}>
+                              Cancel
+                            </Button>
+                            <Button 
+                              className="bg-green-600 text-white hover:bg-green-700"
+                              onClick={() => selectedRequest && handleApprove(selectedRequest)}
+                            >
+                              Approve
+                            </Button>
+                          </DialogFooter>
+                        </DialogContent>
+                      </Dialog>
+
+                      <Dialog open={rejectDialogOpen} onOpenChange={setRejectDialogOpen}>
+                        <DialogTrigger asChild>
+                          <Button 
+                            size="sm" 
+                            style={{ backgroundColor: '#dc2626', color: 'white', border: '2px solid #dc2626' }}
+                            className="hover:bg-red-700 shadow-lg font-bold px-4 py-2 rounded transition-all duration-300 hover:scale-105"
+                            onClick={() => setSelectedRequest(request)}
+                          >
+                            <XCircle className="mr-1 h-4 w-4" />
+                            Reject
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent className="bg-white border border-gray-300 shadow-xl">
+                          <DialogHeader>
+                            <DialogTitle className="text-black">Reject Request</DialogTitle>
+                            <DialogDescription className="text-gray-600">
+                              Please provide a reason for rejecting "{selectedRequest?.title}".
+                            </DialogDescription>
+                          </DialogHeader>
+                          <div className="space-y-2">
+                            <Label htmlFor="reason" className="text-black">Reason for rejection</Label>
+                            <Textarea
+                              id="reason"
+                              placeholder="Enter reason for rejection..."
+                              value={rejectReason}
+                              onChange={(e) => setRejectReason(e.target.value)}
+                              className="border-gray-300 focus:border-black focus:ring-black"
+                            />
+                          </div>
+                          <DialogFooter>
+                            <Button variant="outline" onClick={() => {
+                              setRejectDialogOpen(false);
+                              setRejectReason('');
+                            }}>
+                              Cancel
+                            </Button>
+                            <Button 
+                              variant="destructive"
+                              onClick={() => selectedRequest && handleReject(selectedRequest)}
+                            >
+                              Reject
+                            </Button>
+                          </DialogFooter>
+                        </DialogContent>
+                      </Dialog>
                     </>
                   )}
                 </div>

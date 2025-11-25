@@ -2,47 +2,98 @@
 
 :root {
   --background: 0 0% 100%;
-  --foreground: 222.2 84% 4.9%;
+  --foreground: 225 27% 14%;
   --card: 0 0% 100%;
-  --card-foreground: 222.2 84% 4.9%;
+  --card-foreground: 225 27% 14%;
   --popover: 0 0% 100%;
-  --popover-foreground: 222.2 84% 4.9%;
-  --primary: 222.2 47.4% 11.2%;
-  --primary-foreground: 210 40% 98%;
-  --secondary: 210 40% 96%;
-  --secondary-foreground: 222.2 47.4% 11.2%;
-  --muted: 210 40% 96%;
-  --muted-foreground: 215.4 16.3% 46.9%;
-  --accent: 210 40% 96%;
-  --accent-foreground: 222.2 47.4% 11.2%;
+  --popover-foreground: 225 27% 14%;
+  --primary: 120 69% 70%;
+  --primary-foreground: 225 44% 7%;
+  --secondary: 60 12% 96%;
+  --secondary-foreground: 225 27% 14%;
+  --muted: 60 4% 90%;
+  --muted-foreground: 225 10% 45%;
+  --accent: 120 69% 70%;
+  --accent-foreground: 225 44% 7%;
   --destructive: 0 84.2% 60.2%;
-  --destructive-foreground: 210 40% 98%;
-  --border: 214.3 31.8% 91.4%;
-  --input: 214.3 31.8% 91.4%;
-  --ring: 222.2 84% 4.9%;
+  --destructive-foreground: 0 0% 100%;
+  --border: 0 0% 90%;
+  --input: 0 0% 90%;
+  --ring: 120 69% 70%;
   --radius: 0.5rem;
+  --chart-1: 120 69% 70%;
+  --chart-2: 225 27% 14%;
+  --chart-3: 60 12% 96%;
+  --chart-4: 120 60% 62%;
+  --chart-5: 225 22% 21%;
 }
 
 .dark {
-  --background: 222.2 84% 4.9%;
-  --foreground: 210 40% 98%;
-  --card: 222.2 84% 4.9%;
-  --card-foreground: 210 40% 98%;
-  --popover: 222.2 84% 4.9%;
-  --popover-foreground: 210 40% 98%;
-  --primary: 210 40% 98%;
-  --primary-foreground: 222.2 47.4% 11.2%;
-  --secondary: 217.2 32.6% 17.5%;
-  --secondary-foreground: 210 40% 98%;
-  --muted: 217.2 32.6% 17.5%;
-  --muted-foreground: 215 20.2% 65.1%;
-  --accent: 217.2 32.6% 17.5%;
-  --accent-foreground: 210 40% 98%;
+  --background: 225 44% 7%;
+  --foreground: 60 12% 96%;
+  --card: 225 27% 14%;
+  --card-foreground: 60 12% 96%;
+  --popover: 225 27% 14%;
+  --popover-foreground: 60 12% 96%;
+  --primary: 120 69% 70%;
+  --primary-foreground: 225 44% 7%;
+  --secondary: 225 22% 21%;
+  --secondary-foreground: 60 12% 96%;
+  --muted: 225 22% 21%;
+  --muted-foreground: 60 4% 70%;
+  --accent: 120 69% 70%;
+  --accent-foreground: 225 44% 7%;
   --destructive: 0 62.8% 30.6%;
-  --destructive-foreground: 210 40% 98%;
-  --border: 217.2 32.6% 17.5%;
-  --input: 217.2 32.6% 17.5%;
-  --ring: 212.7 26.8% 83.9%;
+  --destructive-foreground: 60 12% 96%;
+  --border: 225 22% 21%;
+  --input: 225 22% 21%;
+  --ring: 120 69% 70%;
+  --chart-1: 120 69% 70%;
+  --chart-2: 60 12% 96%;
+  --chart-3: 225 22% 21%;
+  --chart-4: 120 60% 62%;
+  --chart-5: 225 27% 14%;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --radius: var(--radius);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  
+  /* Payhawk-inspired custom colors */
+  --payhawk-green: 120 69% 70%;
+  --payhawk-dark: 225 27% 14%;
+  --payhawk-darker: 225 44% 7%;
+  --payhawk-light: 60 12% 96%;
+  --payhawk-gray: 225 22% 21%;
+  
+  --color-payhawk-green: var(--payhawk-green);
+  --color-payhawk-dark: var(--payhawk-dark);
+  --color-payhawk-darker: var(--payhawk-darker);
+  --color-payhawk-light: var(--payhawk-light);
+  --color-payhawk-gray: var(--payhawk-gray);
 }
 
 * {
@@ -50,8 +101,9 @@
 }
 
 body {
-  background-color: white;
-  color: black;
+  background-color: hsl(var(--background));
+  color: hsl(var(--foreground));
+  font-feature-settings: "rlig" 1, "calt" 1;
 }
 
 /* Custom animations for landing page */
@@ -77,7 +129,7 @@ body {
 
 .hover-lift:hover {
   transform: translateY(-8px);
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 20px 25px -5px rgba(127, 232, 127, 0.1), 0 10px 10px -5px rgba(127, 232, 127, 0.04);
 }
 
 /* Button hover effects */
@@ -100,4 +152,38 @@ body {
 
 .btn-hover:hover::before {
   left: 100%;
+}
+
+/* Gradient backgrounds */
+.gradient-green {
+  background: linear-gradient(135deg, hsl(120, 69%, 70%) 0%, hsl(120, 60%, 62%) 100%);
+}
+
+.gradient-dark {
+  background: linear-gradient(135deg, hsl(225, 27%, 14%) 0%, hsl(225, 44%, 7%) 100%);
+}
+
+/* Custom utilities */
+@utility text-payhawk-green {
+  color: hsl(var(--payhawk-green));
+}
+
+@utility bg-payhawk-green {
+  background-color: hsl(var(--payhawk-green));
+}
+
+@utility bg-payhawk-dark {
+  background-color: hsl(var(--payhawk-dark));
+}
+
+@utility bg-payhawk-darker {
+  background-color: hsl(var(--payhawk-darker));
+}
+
+@utility bg-payhawk-light {
+  background-color: hsl(var(--payhawk-light));
+}
+
+@utility border-payhawk-green {
+  border-color: hsl(var(--payhawk-green));
 }

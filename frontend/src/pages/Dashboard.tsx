@@ -59,18 +59,39 @@ export default function Dashboard() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Simulate API loading
-    const timer = setTimeout(() => {
-      // Filter requests based on user role
-      let filteredRequests = mockRequests;
-      if (user?.role === 'staff') {
-        filteredRequests = mockRequests.filter(req => req.created_by === user.id);
+    const loadRequests = async () => {
+      try {
+        const { purchaseRequests } = await import('@/services/api');
+        const response = await purchaseRequests.getAll();
+        let allRequests = response.data.results || response.data || [];
+        
+        // Filter based on user role
+        if (user?.role === 'staff') {
+          // Staff can only see their own requests
+          allRequests = allRequests.filter((req: any) => req.created_by === user.id);
+        } else if (user?.role?.includes('approver')) {
+          // Approvers see pending requests and their reviewed requests
+          allRequests = allRequests.filter((req: any) => 
+            req.status === 'pending' || req.approved_by === user.id
+          );
+        }
+        // Finance sees all requests
+        
+        setRequests(allRequests);
+      } catch (error) {
+        console.error('Error loading requests:', error);
+        // Fallback to mock data with role filtering
+        let filteredRequests = mockRequests;
+        if (user?.role === 'staff') {
+          filteredRequests = mockRequests.filter(req => req.created_by === user.id);
+        }
+        setRequests(filteredRequests);
+      } finally {
+        setIsLoading(false);
       }
-      setRequests(filteredRequests);
-      setIsLoading(false);
-    }, 1000);
+    };
 
-    return () => clearTimeout(timer);
+    loadRequests();
   }, [user]);
 
   const getStats = (): Stats => {
@@ -95,7 +116,7 @@ export default function Dashboard() {
         </div>
         <div className="flex gap-3">
           {user?.role === 'staff' && (
-            <Button asChild className="bg-black text-white hover:bg-gray-800 transition-all duration-300 hover:scale-105 transform">
+            <Button asChild className="bg-black text-white hover:bg-gray-800 transition-all duration-300 hover:scale-105 transform shadow-lg font-semibold">
               <Link to="/requests/new">
                 <Plus className="mr-2 h-4 w-4" />
                 New Request
@@ -124,10 +145,10 @@ export default function Dashboard() {
       </div>
 
       <div className="grid gap-4 md:grid-cols-3">
-        <Card className="border-gray-200 hover:border-black transition-all duration-300 hover:scale-105 transform hover:shadow-lg">
+        <Card className="border-gray-200 hover:border-black transition-all duration-300 hover:scale-105 transform hover:shadow-lg bg-white">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-black">Pending</CardTitle>
-            <Clock className="h-4 w-4 text-gray-600" />
+            <CardTitle className="text-sm font-medium text-gray-600">Pending</CardTitle>
+            <Clock className="h-4 w-4 text-amber-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-black">{stats.pending}</div>
@@ -137,10 +158,10 @@ export default function Dashboard() {
           </CardContent>
         </Card>
 
-        <Card className="border-gray-200 hover:border-black transition-all duration-300 hover:scale-105 transform hover:shadow-lg">
+        <Card className="border-gray-200 hover:border-black transition-all duration-300 hover:scale-105 transform hover:shadow-lg bg-white">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-black">Approved</CardTitle>
-            <CheckCircle className="h-4 w-4 text-gray-600" />
+            <CardTitle className="text-sm font-medium text-gray-600">Approved</CardTitle>
+            <CheckCircle className="h-4 w-4 text-green-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-black">{stats.approved}</div>
@@ -150,10 +171,10 @@ export default function Dashboard() {
           </CardContent>
         </Card>
 
-        <Card className="border-gray-200 hover:border-black transition-all duration-300 hover:scale-105 transform hover:shadow-lg">
+        <Card className="border-gray-200 hover:border-black transition-all duration-300 hover:scale-105 transform hover:shadow-lg bg-white">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-black">Rejected</CardTitle>
-            <XCircle className="h-4 w-4 text-gray-600" />
+            <CardTitle className="text-sm font-medium text-gray-600">Rejected</CardTitle>
+            <XCircle className="h-4 w-4 text-red-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-black">{stats.rejected}</div>

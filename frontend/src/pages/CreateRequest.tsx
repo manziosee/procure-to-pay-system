@@ -9,13 +9,14 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { FileUpload } from '@/components/FileUpload';
+import { purchaseRequests } from '@/services/api';
 
 
 const requestSchema = z.object({
   title: z.string().min(1, 'Title is required'),
   description: z.string().min(1, 'Description is required'),
   amount: z.number().min(0.01, 'Amount must be greater than 0'),
-  proforma: z.instanceof(File).optional(),
+  proforma: z.instanceof(File).nullable().optional(),
 });
 
 type RequestFormData = z.infer<typeof requestSchema>;
@@ -38,15 +39,58 @@ export default function CreateRequest() {
   const proformaFile = watch('proforma');
 
   const onSubmit = async (data: RequestFormData) => {
+    console.log('Form submitted with data:', data);
     setIsSubmitting(true);
     
-    // Simulate API call
-    setTimeout(() => {
-      console.log('Request created:', data);
+    try {
+      const formData = new FormData();
+      formData.append('title', data.title);
+      formData.append('description', data.description);
+      formData.append('amount', data.amount.toString());
+      
+      if (data.proforma) {
+        formData.append('proforma', data.proforma);
+        console.log('Proforma file attached:', data.proforma.name);
+      }
+      
+      console.log('Sending request to API...');
+      // Use the actual API
+      const response = await purchaseRequests.create(formData);
+      
+      console.log('Request created successfully:', response);
       alert('Purchase request created successfully!');
       navigate('/');
+    } catch (error: any) {
+      console.error('Error creating request:', error);
+      console.error('Error details:', {
+        status: error.response?.status,
+        data: error.response?.data,
+        message: error.message
+      });
+      
+      let errorMessage: string;
+      
+      if (error.response?.status === 401) {
+        errorMessage = 'Authentication failed. Please login again.';
+        // Redirect to login
+        navigate('/login');
+        return;
+      } else if (error.response?.status === 403) {
+        errorMessage = 'You do not have permission to create requests.';
+      } else if (error.response?.data?.detail) {
+        errorMessage = error.response.data.detail;
+      } else if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error.message) {
+        errorMessage = error.message;
+      } else {
+        errorMessage = 'Failed to create request. Please try again.';
+      }
+      
+      alert(errorMessage);
+    } finally {
       setIsSubmitting(false);
-    }, 1500);
+    }
   };
 
   return (
@@ -117,13 +161,13 @@ export default function CreateRequest() {
             </div>
 
             <div className="space-y-2">
-              <label className="block text-sm font-medium">
+              <label htmlFor="proforma" className="block text-sm font-medium">
                 Proforma Invoice (Optional)
               </label>
               <FileUpload
                 onFileSelect={(file) => setValue('proforma', file)}
                 accept=".pdf,.jpg,.jpeg,.png"
-                maxSizeMB={5}
+                maxSize={5 * 1024 * 1024}
                 label="Upload Proforma"
               />
               {proformaFile && (
@@ -142,7 +186,7 @@ export default function CreateRequest() {
               >
                 Cancel
               </Button>
-              <Button type="submit" disabled={isSubmitting}>
+              <Button type="submit" disabled={isSubmitting} className="bg-black hover:bg-gray-800 text-white shadow-lg transition-all duration-300 hover:scale-105">
                 {isSubmitting ? 'Creating...' : 'Create Request'}
               </Button>
             </div>

@@ -16,7 +16,7 @@ export default function Login() {
   const successMessage = location.state?.message;
   
   const [credentials, setCredentials] = useState<LoginCredentials>({ 
-    username: '', 
+    email: '', 
     password: '' 
   });
   const [error, setError] = useState<string>('');
@@ -31,15 +31,16 @@ export default function Login() {
     
     try {
       await login(credentials);
-    } catch (err) {
-      setError('Invalid credentials. Please try again.');
+    } catch (err: any) {
+      console.error('Login error:', err);
+      setError(err.response?.data?.detail || err.message || 'Invalid credentials. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-gray-50">
       {/* Login Form */}
       <div className="flex items-center justify-center px-4 py-12 min-h-screen">
         <div className="w-full max-w-md space-y-8">
@@ -64,9 +65,9 @@ export default function Login() {
             </CardHeader>
             <CardContent>
               {successMessage && (
-                <Alert className="mb-4 border-green-500 bg-green-50 dark:bg-green-950">
-                  <CheckCircle className="h-4 w-4 text-green-600" />
-                  <AlertDescription className="text-green-600">
+                <Alert className="mb-4 border-payhawk-green bg-payhawk-green/10">
+                  <CheckCircle className="h-4 w-4 text-payhawk-green" />
+                  <AlertDescription className="text-payhawk-green">
                     {successMessage}
                   </AlertDescription>
                 </Alert>
@@ -81,13 +82,13 @@ export default function Login() {
               
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="space-y-2">
-                  <Label htmlFor="username" className="text-black font-medium">Username</Label>
+                  <Label htmlFor="email" className="text-black font-medium">Email</Label>
                   <Input
-                    id="username"
-                    type="text"
-                    placeholder="Enter your username"
-                    value={credentials.username}
-                    onChange={(e) => setCredentials({...credentials, username: e.target.value})}
+                    id="email"
+                    type="email"
+                    placeholder="Enter your email"
+                    value={credentials.email}
+                    onChange={(e) => setCredentials({...credentials, email: e.target.value})}
                     required
                     disabled={loading}
                     className="h-12 border-gray-300 focus:border-black focus:ring-black"
@@ -147,29 +148,7 @@ export default function Login() {
             </CardContent>
           </Card>
 
-          {/* Demo Credentials */}
-          <Card className="bg-gray-50 border border-gray-200 hover:shadow-lg transition-all duration-300">
-            <CardContent className="pt-6">
-              <div className="text-center mb-4">
-                <p className="text-lg font-semibold text-black mb-2">Demo Credentials</p>
-                <p className="text-sm text-gray-600">Try different user roles</p>
-              </div>
-              <div className="grid grid-cols-1 gap-3">
-                <div className="p-4 bg-white border border-gray-200 hover:border-black transition-all duration-300 hover:scale-105 transform">
-                  <p className="font-semibold text-black mb-1">Staff</p>
-                  <code className="text-sm bg-gray-100 px-3 py-1 border text-black hover:bg-black hover:text-white transition-all duration-300">staff / password</code>
-                </div>
-                <div className="p-4 bg-white border border-gray-200 hover:border-black transition-all duration-300 hover:scale-105 transform">
-                  <p className="font-semibold text-black mb-1">Approver</p>
-                  <code className="text-sm bg-gray-100 px-3 py-1 border text-black hover:bg-black hover:text-white transition-all duration-300">approver / password</code>
-                </div>
-                <div className="p-4 bg-white border border-gray-200 hover:border-black transition-all duration-300 hover:scale-105 transform">
-                  <p className="font-semibold text-black mb-1">Finance</p>
-                  <code className="text-sm bg-gray-100 px-3 py-1 border text-black hover:bg-black hover:text-white transition-all duration-300">finance / password</code>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+
 
           <div className="text-center">
             <p className="text-gray-600">

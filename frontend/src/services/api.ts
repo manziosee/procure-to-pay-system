@@ -1,6 +1,6 @@
 import axios, { AxiosInstance, InternalAxiosRequestConfig, AxiosResponse } from 'axios';
 
-const API_URL = 'https://procure-to-pay-backend.fly.dev/api';
+const API_URL = import.meta.env.VITE_API_URL || 'https://procure-to-pay-system-xnwp.onrender.com/api';
 
 const api: AxiosInstance = axios.create({
   baseURL: API_URL,
@@ -60,7 +60,7 @@ api.interceptors.response.use(
 
 // Auth API
 export const auth = {
-  login: (credentials: { username: string; password: string }) => 
+  login: (credentials: { email: string; password: string }) => 
     api.post('/auth/login/', credentials).then((res) => {
       if (res.data.access) {
         localStorage.setItem('token', res.data.access);
@@ -71,14 +71,23 @@ export const auth = {
       return res.data;
     }),
 
+  register: (userData: { email: string; password: string; password_confirm: string; first_name: string; last_name: string; role: string; username: string }) => 
+    api.post('/auth/register/', userData),
+
   refreshToken: (refresh: string) => 
     api.post('/auth/refresh/', { refresh }),
 
   getProfile: () => api.get('/auth/profile/'),
 
   logout: () => {
+    const refreshToken = localStorage.getItem('refreshToken');
+    const logoutPromise = refreshToken 
+      ? api.post('/auth/logout/', { refresh: refreshToken })
+      : Promise.resolve();
+    
     localStorage.removeItem('token');
-    return Promise.resolve();
+    localStorage.removeItem('refreshToken');
+    return logoutPromise;
   }
 };
 
@@ -138,6 +147,35 @@ export const documents = {
   }
 };
 
+// Proforma Workflow API
+export const proforma = {
+  // Upload proforma
+  upload: (file: File) => {
+    const formData = new FormData();
+    formData.append('proforma', file);
+    return api.post('/proforma/proforma/upload/', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+  },
+
+  // Generate PO from proforma
+  generatePO: (proformaId: string) => 
+    api.post(`/proforma/proforma/${proformaId}/generate-po/`),
+
+  // Validate receipt against PO
+  validateReceipt: (poId: string, file: File) => {
+    const formData = new FormData();
+    formData.append('receipt', file);
+    return api.post(`/proforma/po/${poId}/validate-receipt/`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+  }
+};
+
 // API Root
 export const getApiRoot = () => api.get('/');
 
@@ -146,5 +184,6 @@ export default {
   auth,
   purchaseRequests,
   documents,
+  proforma,
   getApiRoot
 };

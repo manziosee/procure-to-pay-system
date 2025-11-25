@@ -1,10 +1,11 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import type { User, LoginCredentials } from '@/types';
+import { auth as authAPI } from '@/services/api';
 
 interface AuthContextType {
   user: User | null;
   login: (credentials: LoginCredentials) => Promise<User>;
-  logout: () => void;
+  logout: () => Promise<void>;
   loading: boolean;
 }
 
@@ -80,19 +81,31 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }, []);
 
   const login = async (credentials: LoginCredentials): Promise<User> => {
-    // Mock login - check if username exists in mockUsers
-    const mockUser = mockUsers[credentials.username];
-    if (mockUser && credentials.password === 'password') {
-      localStorage.setItem('currentUser', JSON.stringify(mockUser));
-      setUser(mockUser);
-      return mockUser;
+    try {
+      const response = await authAPI.login({
+        email: credentials.email,
+        password: credentials.password
+      });
+      
+      const userData = response.user;
+      localStorage.setItem('currentUser', JSON.stringify(userData));
+      setUser(userData);
+      return userData;
+    } catch (error) {
+      console.error('Login error:', error);
+      throw new Error('Invalid credentials');
     }
-    throw new Error('Invalid credentials');
   };
 
-  const logout = () => {
-    localStorage.removeItem('currentUser');
-    setUser(null);
+  const logout = async () => {
+    try {
+      await authAPI.logout();
+    } catch (error) {
+      console.error('Logout error:', error);
+    } finally {
+      localStorage.removeItem('currentUser');
+      setUser(null);
+    }
   };
 
   const value = {
