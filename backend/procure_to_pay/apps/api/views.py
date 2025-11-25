@@ -2,24 +2,10 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.reverse import reverse
-from drf_yasg.utils import swagger_auto_schema
-from drf_yasg import openapi
+from drf_spectacular.utils import extend_schema
 
-@swagger_auto_schema(
-    method='get',
-    operation_description="API Root - Lists all available endpoints",
-    responses={
-        200: openapi.Response(
-            description="Available API endpoints",
-            examples={
-                "application/json": {
-                    "auth": "http://localhost:8000/api/auth/",
-                    "requests": "http://localhost:8000/api/requests/",
-                    "documents": "http://localhost:8000/api/documents/"
-                }
-            }
-        )
-    },
+@extend_schema(
+    description="API Root - Lists all available endpoints",
     tags=['API Root']
 )
 @api_view(['GET'])
@@ -34,8 +20,8 @@ def api_root(request, format=None):
             'documents': request.build_absolute_uri('/api/documents/'),
         },
         'documentation': {
-            'swagger': request.build_absolute_uri('/swagger/'),
-            'redoc': request.build_absolute_uri('/redoc/'),
+            'swagger': request.build_absolute_uri('/api/docs/'),
+            'redoc': request.build_absolute_uri('/api/redoc/'),
         },
         'demo_users': {
             'staff': 'staff1 / password123',
