@@ -1,7 +1,7 @@
 version: '3.8'
 
 services:
-  # Using Supabase PostgreSQL - no local db needed
+  # Using Render PostgreSQL - no local db needed
 
   redis:
     image: redis:7-alpine
@@ -16,7 +16,7 @@ services:
       - DB_NAME=${DB_NAME:-postgres}
       - DB_USER=${DB_USER:-postgres}
       - DB_PASSWORD=${DB_PASSWORD:-67bC6ShcAyCknv?}
-      - DB_HOST=${DB_HOST:-db.jkxhrolkjbqmwntuarwf.supabase.co}
+      - DATABASE_URL=${DATABASE_URL:-postgresql://procure_to_pay_db_6wh2_user:xejK62m3TQoxXwRlRGgFWSsVfk51EXKX@dpg-d4itlm6r433s73a9n490-a.oregon-postgres.render.com/procure_to_pay_db_6wh2}
       - DB_PORT=5432
       - REDIS_URL=redis://redis:6379
       - OPENAI_API_KEY=${OPENAI_API_KEY}

@@ -15,32 +15,18 @@ if 'RENDER' in os.environ:
         '.render.com'
     ])
 
-# Database for production (Supabase PostgreSQL)
+# Database for production (Render PostgreSQL)
 DATABASE_URL = os.environ.get('DATABASE_URL')
-if DATABASE_URL:
-    # Use DATABASE_URL if provided
-    DATABASES = {
-        'default': dj_database_url.config(
-            default=DATABASE_URL,
-            conn_max_age=600,
-            ssl_require=True,
-        )
-    }
-else:
-    # Use individual environment variables
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.postgresql',
-            'NAME': os.environ.get('DB_NAME', 'postgres'),
-            'USER': os.environ.get('DB_USER', 'postgres'),
-            'PASSWORD': os.environ.get('DB_PASSWORD'),
-            'HOST': os.environ.get('DB_HOST'),
-            'PORT': os.environ.get('DB_PORT', '5432'),
-            'OPTIONS': {
-                'sslmode': 'require',
-            },
-        }
-    }
+if not DATABASE_URL:
+    raise ValueError('DATABASE_URL environment variable is required for production')
+
+DATABASES = {
+    'default': dj_database_url.config(
+        default=DATABASE_URL,
+        conn_max_age=600,
+        ssl_require=True,
+    )
+}
 
 # Static files
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
@@ -60,6 +46,9 @@ if 'RENDER' in os.environ:
 
 CORS_ALLOW_ALL_ORIGINS = False
 CORS_ALLOW_CREDENTIALS = True
+
+# Port configuration for Render
+PORT = int(os.environ.get('PORT', 8000))
 
 # Security settings
 SECURE_BROWSER_XSS_FILTER = True
