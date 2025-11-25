@@ -113,15 +113,27 @@ A comprehensive **Procure-to-Pay** system with Django REST API backend and React
 **ReDoc**: https://procure-to-pay-system-xnwp.onrender.com/api/redoc/  
 **Health Check**: https://procure-to-pay-system-xnwp.onrender.com/health/
 
-### ⚙️ Demo Users (Auto-created)
+## 🎨 UI/UX Features
 
-| Role | Username | Password | Capabilities |
-|------|----------|----------|-------------|
-| **Staff** | `staff1` | `password123` | Create requests, submit receipts |
-| **Approver L1** | `approver1` | `password123` | First-level approvals |
-| **Approver L2** | `approver2` | `password123` | Final approvals, PO generation |
-| **Finance** | `finance1` | `password123` | View all requests, reports |
+### 🖤 **Clean Black & White Design**
+- Professional black and white color scheme
+- Consistent styling across all pages
+- Hover effects and smooth transitions
+- Accessible contrast ratios
 
+### 📱 **Responsive Interface**
+- Mobile-first responsive design
+- Dynamic navigation with scroll effects
+- Interactive buttons with hover animations
+- Clean form layouts with proper validation
+
+### 🔘 **Enhanced User Experience**
+- Visible approve/reject buttons for approvers
+- Modal dialogs for confirmation actions
+- Real-time form validation
+- Loading states and error handling
+
+#
 ### 🧪 Test the API
 
 ```bash
@@ -188,9 +200,18 @@ graph TD
 
 ### 🔄 **Business Logic**
 - **Multi-level approval workflow**: Level 1 → Level 2 → Approved
+- **Dual approval requirement**: Both Level 1 AND Level 2 must approve
+- **Immediate rejection**: Any approver can reject instantly
 - **Immutable status**: Once approved/rejected, cannot be changed
 - **Automatic PO generation**: Triggered on final approval
 - **Concurrent safety**: Database transactions prevent race conditions
+
+### 🎯 **Approval Process Details**
+- **Pending Status**: Request awaits approvals
+- **Level 1 Approval**: First approver reviews and approves
+- **Level 2 Approval**: Second approver provides final approval
+- **Status Change**: Only changes to 'approved' when BOTH levels approve
+- **Rejection**: Any level can reject, immediately changing status to 'rejected'
 
 ### 🤖 **AI Integration**
 - **OCR Processing**: Extract text from images using pytesseract
@@ -315,6 +336,17 @@ python3 VALIDATE_BUILD.py
 - **Swagger UI**: https://procure-to-pay-system-xnwp.onrender.com/api/docs/ - Interactive API documentation
 - **ReDoc**: https://procure-to-pay-system-xnwp.onrender.com/api/redoc/ - Clean API documentation
 - **JSON Schema**: https://procure-to-pay-system-xnwp.onrender.com/api/schema/ - OpenAPI specification
+
+## 🔧 Recent Updates
+
+### ✅ **Latest Improvements**
+- **Enhanced UI**: Clean black and white theme across all pages
+- **Fixed Approval Buttons**: Visible red reject and green approve buttons
+- **Modal Dialogs**: Proper confirmation dialogs for approve/reject actions
+- **Form Validation**: Real-time validation with proper error handling
+- **Responsive Design**: Mobile-friendly interface with smooth animations
+- **Database Migration**: Successfully migrated from Supabase to Render PostgreSQL
+- **API Documentation**: Updated to drf-spectacular for modern OpenAPI 3.0 support
 
 
 ---

@@ -58,6 +58,19 @@ class ProcessDocumentView(APIView):
                 response_only=True
             )
         ],
+        responses={
+            200: {
+                'type': 'object',
+                'properties': {
+                    'message': {'type': 'string'},
+                    'extracted_data': {'type': 'object'},
+                    'processing_method': {'type': 'string'},
+                    'processing_id': {'type': 'integer'}
+                }
+            },
+            400: {'type': 'object', 'properties': {'error': {'type': 'string'}}},
+            500: {'type': 'object', 'properties': {'error': {'type': 'string'}}}
+        },
         tags=['Documents']
     )
     def post(self, request):

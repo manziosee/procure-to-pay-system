@@ -8,7 +8,7 @@ interface StatusBadgeProps {
 export const StatusBadge = ({ status, className }: StatusBadgeProps) => {
   const statusStyles = {
     pending: 'bg-yellow-100 text-yellow-800 border border-yellow-300',
-    approved: 'bg-green-100 text-green-800 border border-green-300',
+    approved: 'bg-payhawk-green/10 text-payhawk-green border border-payhawk-green/30',
     rejected: 'bg-red-100 text-red-800 border border-red-300',
   };
 

@@ -13,6 +13,7 @@ import FinanceDashboard from './pages/FinanceDashboard';
 import TestLanding from './pages/TestLanding';
 import Unauthorized from './pages/Unauthorized';
 import Navbar from './components/Navbar';
+
 import { RoleBasedRoute } from './components/RoleBasedRoute';
 
 class ErrorBoundary extends Component<
@@ -81,6 +82,8 @@ function App() {
           <Routes>
             <Route path="/" element={<Dashboard />} />
             
+
+            
             {/* Staff Routes */}
             <Route element={<RoleBasedRoute allowedRoles={['staff']} redirectTo="/unauthorized" />}>
               <Route path="/requests/new" element={<CreateRequest />} />
@@ -101,6 +104,7 @@ function App() {
             <Route path="/requests/:id" element={<RequestDetail />} />
             <Route path="/unauthorized" element={<Unauthorized />} />
             <Route path="/test" element={<TestLanding />} />
+
             
             {/* Fallback */}
             <Route path="*" element={<Navigate to="/" replace />} />

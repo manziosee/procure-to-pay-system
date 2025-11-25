@@ -1,7 +1,8 @@
 import { Link } from 'react-router-dom';
 import { Eye } from 'lucide-react';
 import { PurchaseRequest } from '@/types';
-import { formatCurrency, formatDate, formatStatus } from '@/utils/formatters';
+import { formatDate, formatStatus } from '@/utils/formatters';
+import { formatCurrency } from '@/utils/currency';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -41,9 +42,9 @@ export default function RequestList({ requests, loading }: RequestListProps) {
 
   const getStatusBadge = (status: string) => {
     const styles = {
-      pending: 'bg-yellow-100 text-yellow-800 border border-yellow-300',
-      approved: 'bg-green-100 text-green-800 border border-green-300',
-      rejected: 'bg-red-100 text-red-800 border border-red-300',
+      pending: 'bg-gradient-to-r from-amber-100 to-orange-100 text-amber-800 border border-amber-300',
+      approved: 'bg-gradient-to-r from-emerald-100 to-green-100 text-emerald-800 border border-emerald-300',
+      rejected: 'bg-gradient-to-r from-rose-100 to-red-100 text-rose-800 border border-rose-300',
     };
     return styles[status as keyof typeof styles] || 'bg-gray-100 text-gray-800 border border-gray-300';
   };

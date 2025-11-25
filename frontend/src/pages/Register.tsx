@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { UserPlus, Eye, EyeOff, Sparkles, Shield, Users, Building } from 'lucide-react';
+import { UserPlus, Eye, EyeOff, Shield, Users, Building } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -41,12 +41,23 @@ export default function Register() {
 
     setLoading(true);
     try {
-      // API call would go here
+      const { auth } = await import('@/services/api');
+      await auth.register({
+        email: formData.email,
+        password: formData.password,
+        password_confirm: formData.confirmPassword,
+        first_name: formData.first_name,
+        last_name: formData.last_name,
+        role: formData.role,
+        username: formData.username
+      });
+      
       navigate('/login', { 
         state: { message: 'Account created successfully! Please sign in.' }
       });
-    } catch (err) {
-      setError('Registration failed. Please try again.');
+    } catch (err: any) {
+      const errorMessage = err.response?.data?.message || 'Registration failed. Please try again.';
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -54,7 +65,6 @@ export default function Register() {
 
   return (
     <div className="min-h-screen bg-white">
-      {/* Registration Form */}
       <div className="flex items-center justify-center px-4 py-8 min-h-screen">
         <div className="w-full max-w-lg space-y-8">
           <div className="text-center">
@@ -249,7 +259,7 @@ export default function Register() {
                 
                 <Button
                   type="submit"
-                  className="w-full h-12 bg-black hover:bg-gray-800 text-white font-semibold mt-6"
+                  className="w-full h-12 bg-black hover:bg-gray-800 text-white font-semibold mt-6 transition-all duration-300 hover:scale-105 transform shadow-lg"
                   disabled={loading}
                 >
                   {loading ? (
