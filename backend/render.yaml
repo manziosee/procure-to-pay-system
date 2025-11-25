@@ -1,0 +1,29 @@
+services:
+  - type: web
+    name: procure-to-pay-backend
+    runtime: python
+    region: oregon
+    buildCommand: "./build.sh"
+    startCommand: "gunicorn procure_to_pay.wsgi:application"
+    plan: free
+    branch: main
+    healthCheckPath: /health/
+    envVars:
+      - key: DJANGO_SETTINGS_MODULE
+        value: procure_to_pay.settings.production
+      - key: PYTHON_VERSION
+        value: "3.11.0"
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DEBUG
+        value: "False"
+      - key: ALLOWED_HOSTS
+        sync: false
+      - key: DATABASE_URL
+        sync: false
+      - key: CORS_ALLOWED_ORIGINS
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: REDIS_URL
+        sync: false

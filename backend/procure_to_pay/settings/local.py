@@ -7,9 +7,12 @@ DATABASES = {
         'ENGINE': 'django.db.backends.postgresql',
         'NAME': config('DB_NAME', default='postgres'),
         'USER': config('DB_USER', default='postgres'),
-        'PASSWORD': config('DB_PASSWORD', default='password'),
-        'HOST': config('DB_HOST', default='localhost'),
+        'PASSWORD': config('DB_PASSWORD', default='67bC6ShcAyCknv?'),
+        'HOST': config('DB_HOST', default='db.jkxhrolkjbqmwntuarwf.supabase.co'),
         'PORT': config('DB_PORT', default='5432'),
+        'OPTIONS': {
+            'sslmode': 'require',
+        },
     }
 }
 

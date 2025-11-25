@@ -3,6 +3,7 @@ djangorestframework==3.14.0
 django-cors-headers==4.3.1
 psycopg2-binary==2.9.7
 python-decouple==3.8
+dj-database-url==2.1.0
 python-dotenv==1.0.0
 Pillow==10.0.1
 pytesseract==0.3.10
@@ -19,4 +20,5 @@ python-magic==0.4.27
 django-ratelimit==4.1.0
 bleach==6.1.0
 django-extensions==3.2.3
-drf-yasg==1.21.7
+drf-spectacular==0.29.0
+requests==2.31.0
