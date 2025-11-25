@@ -5,8 +5,8 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.parsers import MultiPartParser, FormParser
 from django_ratelimit.decorators import ratelimit
 from django.utils.decorators import method_decorator
-from drf_yasg.utils import swagger_auto_schema
-from drf_yasg import openapi
+from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiExample
+from drf_spectacular.types import OpenApiTypes
 from .services import DocumentProcessor
 from .models import DocumentProcessing
 from ..requests.security import RateLimiter
@@ -17,50 +17,47 @@ class ProcessDocumentView(APIView):
     permission_classes = [IsAuthenticated]
     parser_classes = [MultiPartParser, FormParser]
     
-    @swagger_auto_schema(
-        operation_description="Process document using AI/OCR to extract structured data",
-        manual_parameters=[
-            openapi.Parameter(
-                'file',
-                openapi.IN_FORM,
-                description="Document file (PDF, JPG, PNG, TXT)",
-                type=openapi.TYPE_FILE,
-                required=True
-            ),
-            openapi.Parameter(
-                'document_type',
-                openapi.IN_FORM,
-                description="Document type",
-                type=openapi.TYPE_STRING,
-                enum=['proforma', 'receipt'],
-                required=True
+    @extend_schema(
+        description="Process document using AI/OCR to extract structured data",
+        request={
+            'multipart/form-data': {
+                'type': 'object',
+                'properties': {
+                    'file': {
+                        'type': 'string',
+                        'format': 'binary',
+                        'description': 'Document file (PDF, JPG, PNG, TXT)'
+                    },
+                    'document_type': {
+                        'type': 'string',
+                        'enum': ['proforma', 'receipt'],
+                        'description': 'Type of document'
+                    }
+                },
+                'required': ['file', 'document_type']
+            }
+        },
+        examples=[
+            OpenApiExample(
+                'Success Response',
+                value={
+                    "message": "Document processed successfully",
+                    "extracted_data": {
+                        "vendor": "ABC Supplies Ltd",
+                        "total_amount": "1500.00",
+                        "items": [
+                            {
+                                "name": "Office Chair",
+                                "quantity": 2,
+                                "unit_price": "750.00"
+                            }
+                        ]
+                    },
+                    "processing_method": "AI"
+                },
+                response_only=True
             )
         ],
-        responses={
-            200: openapi.Response(
-                description="Document processed successfully",
-                examples={
-                    "application/json": {
-                        "message": "Document processed successfully",
-                        "extracted_data": {
-                            "vendor": "Test Supplier Ltd",
-                            "total_amount": "1300.00",
-                            "items": [
-                                {
-                                    "name": "Test Product A",
-                                    "quantity": 2,
-                                    "unit_price": "500.00"
-                                }
-                            ],
-                            "terms": "Net 30 days"
-                        },
-                        "processing_method": "AI"
-                    }
-                }
-            ),
-            400: "Bad request - missing file or invalid type",
-            500: "Document processing failed"
-        },
         tags=['Documents']
     )
     def post(self, request):

@@ -3,19 +3,18 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework import status
 from rest_framework_simplejwt.tokens import RefreshToken
-from drf_yasg.utils import swagger_auto_schema
-from drf_yasg import openapi
+from rest_framework_simplejwt.exceptions import TokenError
+from drf_spectacular.utils import extend_schema
 from .serializers import UserSerializer, RegisterSerializer, LoginSerializer
 
 class RegisterView(APIView):
     permission_classes = [AllowAny]
-    @swagger_auto_schema(
-        operation_description="Register a new user",
-        request_body=RegisterSerializer,
-        responses={
-            201: openapi.Response('User created', UserSerializer),
-            400: "Validation error"
-        },
+    
+    @extend_schema(
+        operation_id="register_user",
+        description="Register a new user",
+        request=RegisterSerializer,
+        responses={201: UserSerializer, 400: None},
         tags=['Authentication']
     )
     def post(self, request):
@@ -27,20 +26,12 @@ class RegisterView(APIView):
 
 class LoginView(APIView):
     permission_classes = [AllowAny]
-    @swagger_auto_schema(
-        operation_description="Login user and get JWT tokens",
-        request_body=LoginSerializer,
-        responses={
-            200: openapi.Response('Login successful', openapi.Schema(
-                type=openapi.TYPE_OBJECT,
-                properties={
-                    'access': openapi.Schema(type=openapi.TYPE_STRING),
-                    'refresh': openapi.Schema(type=openapi.TYPE_STRING),
-                    'user': UserSerializer
-                }
-            )),
-            400: "Invalid credentials"
-        },
+    
+    @extend_schema(
+        operation_id="login_user",
+        description="Login user and get JWT tokens",
+        request=LoginSerializer,
+        responses={200: None, 400: None},
         tags=['Authentication']
     )
     def post(self, request):
@@ -55,15 +46,50 @@ class LoginView(APIView):
             })
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+class LogoutView(APIView):
+    permission_classes = [IsAuthenticated]
+    
+    @extend_schema(
+        operation_id="logout_user",
+        description="Logout user by blacklisting refresh token",
+        request=None,
+        responses={200: None, 400: None, 401: None},
+        tags=['Authentication']
+    )
+    def post(self, request):
+        try:
+            refresh_token = request.data.get('refresh')
+            if not refresh_token:
+                return Response(
+                    {'error': 'Refresh token is required'}, 
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            token = RefreshToken(refresh_token)
+            token.blacklist()
+            
+            return Response(
+                {'message': 'Logout successful'}, 
+                status=status.HTTP_200_OK
+            )
+        except TokenError:
+            return Response(
+                {'error': 'Invalid or expired refresh token'}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        except Exception as e:
+            return Response(
+                {'error': 'Logout failed'}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
 class UserProfileView(APIView):
     permission_classes = [IsAuthenticated]
     
-    @swagger_auto_schema(
-        operation_description="Get current user profile information",
-        responses={
-            200: UserSerializer,
-            401: "Authentication required"
-        },
+    @extend_schema(
+        operation_id="get_user_profile",
+        description="Get current user profile information",
+        responses={200: UserSerializer, 401: None},
         tags=['Authentication']
     )
     def get(self, request):

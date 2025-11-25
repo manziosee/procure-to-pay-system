@@ -3,6 +3,8 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from django.shortcuts import get_object_or_404
+from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiExample
+from drf_spectacular.types import OpenApiTypes
 from .models import Proforma, PurchaseOrder, Receipt
 from .services import DocumentProcessor
 from ..requests.models import PurchaseRequest
@@ -10,6 +12,38 @@ from ..requests.models import PurchaseRequest
 class ProformaUploadView(APIView):
     permission_classes = [IsAuthenticated]
     
+    @extend_schema(
+        description="Upload and process proforma invoice with AI extraction",
+        request={
+            'multipart/form-data': {
+                'type': 'object',
+                'properties': {
+                    'file': {
+                        'type': 'string',
+                        'format': 'binary',
+                        'description': 'Proforma invoice file (PDF, JPG, PNG)'
+                    }
+                },
+                'required': ['file']
+            }
+        },
+        examples=[
+            OpenApiExample(
+                'Success Response',
+                value={
+                    "message": "Proforma uploaded and processed successfully",
+                    "proforma_id": 1,
+                    "extracted_data": {
+                        "vendor": "ABC Supplies Ltd",
+                        "total": "1500.00",
+                        "items": [{"name": "Office Chair", "qty": 2, "price": "750.00"}]
+                    }
+                },
+                response_only=True
+            )
+        ],
+        tags=['Proforma Workflow']
+    )
     def post(self, request):
         if 'file' not in request.FILES:
             return Response({'error': 'No file provided'}, status=status.HTTP_400_BAD_REQUEST)
@@ -43,6 +77,26 @@ class ProformaUploadView(APIView):
 class GeneratePOView(APIView):
     permission_classes = [IsAuthenticated]
     
+    @extend_schema(
+        description="Generate Purchase Order from processed proforma data",
+        examples=[
+            OpenApiExample(
+                'Success Response',
+                value={
+                    "message": "Purchase Order generated successfully",
+                    "po_id": 1,
+                    "po_data": {
+                        "vendor": "ABC Supplies Ltd",
+                        "total": "1500.00",
+                        "items": [{"name": "Office Chair", "qty": 2, "price": "750.00"}],
+                        "terms": "Net 30 days"
+                    }
+                },
+                response_only=True
+            )
+        ],
+        tags=['Proforma Workflow']
+    )
     def post(self, request, proforma_id):
         proforma = get_object_or_404(Proforma, id=proforma_id)
         processor = DocumentProcessor()
@@ -76,6 +130,40 @@ class GeneratePOView(APIView):
 class ReceiptValidationView(APIView):
     permission_classes = [IsAuthenticated]
     
+    @extend_schema(
+        description="Validate receipt against Purchase Order and detect discrepancies",
+        request={
+            'multipart/form-data': {
+                'type': 'object',
+                'properties': {
+                    'file': {
+                        'type': 'string',
+                        'format': 'binary',
+                        'description': 'Receipt file (PDF, JPG, PNG)'
+                    }
+                },
+                'required': ['file']
+            }
+        },
+        examples=[
+            OpenApiExample(
+                'Success Response',
+                value={
+                    "message": "Receipt processed and validated",
+                    "receipt_id": 1,
+                    "extracted_data": {
+                        "vendor": "ABC Supplies Ltd",
+                        "total": "1500.00",
+                        "items": [{"name": "Office Chair", "qty": 2, "price": "750.00"}]
+                    },
+                    "discrepancies": [],
+                    "validation_status": "valid"
+                },
+                response_only=True
+            )
+        ],
+        tags=['Proforma Workflow']
+    )
     def post(self, request, po_id):
         if 'file' not in request.FILES:
             return Response({'error': 'No receipt file provided'}, status=status.HTTP_400_BAD_REQUEST)

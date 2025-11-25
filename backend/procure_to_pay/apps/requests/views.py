@@ -5,68 +5,29 @@ from rest_framework.viewsets import ModelViewSet
 from rest_framework.permissions import IsAuthenticated
 from django.db import transaction
 from django.core.exceptions import ValidationError
-from drf_yasg.utils import swagger_auto_schema
-from drf_yasg import openapi
+from drf_spectacular.utils import extend_schema, extend_schema_view
 from .models import PurchaseRequest, Approval, RequestItem
 from .serializers import PurchaseRequestSerializer, RequestItemSerializer
 from .permissions import CanApproveRequest, CanUpdateRequest
 from ..documents.services import DocumentProcessor, POGenerator
 
+@extend_schema_view(
+    list=extend_schema(description="List purchase requests (filtered by user role)", tags=['Purchase Requests']),
+    create=extend_schema(description="Create new purchase request (Staff only)", tags=['Purchase Requests']),
+    retrieve=extend_schema(description="Get purchase request details", tags=['Purchase Requests']),
+    update=extend_schema(description="Update purchase request (Staff only, pending requests)", tags=['Purchase Requests']),
+)
 class PurchaseRequestViewSet(ModelViewSet):
     serializer_class = PurchaseRequestSerializer
     permission_classes = [IsAuthenticated]
     
-    @swagger_auto_schema(
-        operation_description="List purchase requests (filtered by user role)",
-        manual_parameters=[
-            openapi.Parameter('status', openapi.IN_QUERY, description="Filter by status", type=openapi.TYPE_STRING),
-            openapi.Parameter('page', openapi.IN_QUERY, description="Page number", type=openapi.TYPE_INTEGER),
-        ],
-        responses={200: PurchaseRequestSerializer(many=True)},
-        tags=['Purchase Requests']
-    )
-    def list(self, request, *args, **kwargs):
-        return super().list(request, *args, **kwargs)
-    
-    @swagger_auto_schema(
-        operation_description="Create new purchase request (Staff only)",
-        request_body=PurchaseRequestSerializer,
-        responses={
-            201: PurchaseRequestSerializer,
-            400: "Validation error",
-            403: "Permission denied"
-        },
-        tags=['Purchase Requests']
-    )
-    def create(self, request, *args, **kwargs):
-        return super().create(request, *args, **kwargs)
-    
-    @swagger_auto_schema(
-        operation_description="Get purchase request details",
-        responses={200: PurchaseRequestSerializer},
-        tags=['Purchase Requests']
-    )
-    def retrieve(self, request, *args, **kwargs):
-        return super().retrieve(request, *args, **kwargs)
-    
-    @swagger_auto_schema(
-        operation_description="Update purchase request (Staff only, pending requests)",
-        request_body=PurchaseRequestSerializer,
-        responses={
-            200: PurchaseRequestSerializer,
-            400: "Can only update pending requests",
-            403: "Permission denied"
-        },
-        tags=['Purchase Requests']
-    )
-    def update(self, request, *args, **kwargs):
-        return super().update(request, *args, **kwargs)
-    
     def get_queryset(self):
-        user = self.request.user
-        
         # Handle swagger documentation generation
-        if getattr(self, 'swagger_fake_view', False) or not user.is_authenticated:
+        if getattr(self, 'swagger_fake_view', False):
+            return PurchaseRequest.objects.none()
+            
+        user = self.request.user
+        if not user.is_authenticated:
             return PurchaseRequest.objects.none()
         
         # Optimize queries with select_related and prefetch_related
@@ -103,56 +64,20 @@ class PurchaseRequestViewSet(ModelViewSet):
             return [CanUpdateRequest()]
         return super().get_permissions()
     
-    @swagger_auto_schema(
-        method='patch',
-        operation_description="Approve purchase request (Approvers only)",
-        request_body=openapi.Schema(
-            type=openapi.TYPE_OBJECT,
-            properties={
-                'comments': openapi.Schema(type=openapi.TYPE_STRING, description='Approval comments')
-            }
-        ),
-        responses={
-            200: openapi.Response(
-                description="Request approved successfully",
-                examples={
-                    "application/json": {
-                        "message": "Request approved successfully",
-                        "request": {"id": 1, "status": "approved"}
-                    }
-                }
-            ),
-            400: "Request is not pending or already reviewed",
-            403: "Permission denied"
-        },
+    @extend_schema(
+        description="Approve purchase request (Approvers only)",
+        request=None,
+        responses={200: None, 400: None, 403: None},
         tags=['Purchase Requests']
     )
     @action(detail=True, methods=['patch'])
     def approve(self, request, pk=None):
         return self._handle_approval(request, pk, True)
     
-    @swagger_auto_schema(
-        method='patch',
-        operation_description="Reject purchase request (Approvers only)",
-        request_body=openapi.Schema(
-            type=openapi.TYPE_OBJECT,
-            properties={
-                'comments': openapi.Schema(type=openapi.TYPE_STRING, description='Rejection reason')
-            }
-        ),
-        responses={
-            200: openapi.Response(
-                description="Request rejected successfully",
-                examples={
-                    "application/json": {
-                        "message": "Request rejected successfully",
-                        "request": {"id": 1, "status": "rejected"}
-                    }
-                }
-            ),
-            400: "Request is not pending or already reviewed",
-            403: "Permission denied"
-        },
+    @extend_schema(
+        description="Reject purchase request (Approvers only)",
+        request=None,
+        responses={200: None, 400: None, 403: None},
         tags=['Purchase Requests']
     )
     @action(detail=True, methods=['patch'])
@@ -262,37 +187,10 @@ class PurchaseRequestViewSet(ModelViewSet):
         
         return super().create(request, *args, **kwargs)
     
-    @swagger_auto_schema(
-        method='post',
-        operation_description="Submit receipt for approved request (Staff only)",
-        request_body=openapi.Schema(
-            type=openapi.TYPE_OBJECT,
-            properties={
-                'receipt': openapi.Schema(
-                    type=openapi.TYPE_FILE,
-                    description="Receipt file (PDF, JPG, PNG)"
-                )
-            },
-            required=['receipt']
-        ),
-        responses={
-            200: openapi.Response(
-                description="Receipt submitted and validated",
-                examples={
-                    "application/json": {
-                        "message": "Receipt submitted successfully",
-                        "validation_results": {
-                            "valid": True,
-                            "discrepancies": [],
-                            "warnings": []
-                        }
-                    }
-                }
-            ),
-            400: "Receipt file required or request not approved",
-            403: "Permission denied",
-            500: "Receipt processing failed"
-        },
+    @extend_schema(
+        description="Submit receipt for approved request (Staff only)",
+        request=None,
+        responses={200: None, 400: None, 403: None, 500: None},
         tags=['Purchase Requests']
     )
     @action(detail=True, methods=['post'], url_path='submit-receipt')

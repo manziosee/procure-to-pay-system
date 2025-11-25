@@ -22,8 +22,9 @@ DJANGO_APPS = [
 THIRD_PARTY_APPS = [
     'rest_framework',
     'rest_framework_simplejwt',
+    'rest_framework_simplejwt.token_blacklist',
     'corsheaders',
-    'drf_yasg',
+    'drf_spectacular',
 ]
 
 LOCAL_APPS = [
@@ -79,11 +80,14 @@ WSGI_APPLICATION = 'procure_to_pay.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': config('DB_NAME', default='procure_to_pay'),
+        'NAME': config('DB_NAME', default='postgres'),
         'USER': config('DB_USER', default='postgres'),
-        'PASSWORD': config('DB_PASSWORD', default='2001'),
-        'HOST': config('DB_HOST', default='localhost'),
+        'PASSWORD': config('DB_PASSWORD', default='67bC6ShcAyCknv?'),
+        'HOST': config('DB_HOST', default='db.jkxhrolkjbqmwntuarwf.supabase.co'),
         'PORT': config('DB_PORT', default='5432'),
+        'OPTIONS': {
+            'sslmode': 'require',
+        },
     }
 }
 
@@ -130,13 +134,17 @@ REST_FRAMEWORK = {
         'django_filters.rest_framework.DjangoFilterBackend',
         'rest_framework.filters.SearchFilter',
         'rest_framework.filters.OrderingFilter',
-    ]
+    ],
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
 }
 
 from datetime import timedelta
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
+    'ROTATE_REFRESH_TOKENS': True,
+    'BLACKLIST_AFTER_ROTATION': True,
+    'UPDATE_LAST_LOGIN': True,
 }
 
 CORS_ALLOWED_ORIGINS = config('CORS_ALLOWED_ORIGINS', default='http://localhost:3000,http://127.0.0.1:3000').split(',')
@@ -201,7 +209,51 @@ FILE_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024  # 10MB
 DATA_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024  # 10MB
 FILE_UPLOAD_PERMISSIONS = 0o644
 
-# ReDoc settings only
-REDOC_SETTINGS = {
-    'LAZY_RENDERING': False,
+# drf-spectacular settings
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'Procure-to-Pay System API',
+    'DESCRIPTION': '''Complete API for Purchase Request & Approval System
+    
+## Features
+- 🔐 JWT Authentication with role-based access
+- 📋 Multi-level approval workflow (Level 1 → Level 2 → Approved)
+- 🤖 AI-powered document processing (OCR + OpenAI)
+- 📄 Proforma upload and data extraction
+- 🔄 Automatic Purchase Order generation
+- 🧾 Receipt validation with discrepancy detection
+
+## Demo Users
+- **Staff**: staff1@example.com / password123
+- **Approver L1**: approver1@example.com / password123
+- **Approver L2**: approver2@example.com / password123
+- **Finance**: finance1@example.com / password123
+
+## Workflow
+1. Staff creates purchase request (status: pending)
+2. Level 1 approver reviews → approves/rejects
+3. Level 2 approver reviews → final approval
+4. Auto-generates Purchase Order on approval
+5. Staff submits receipt for validation
+    ''',
+    'VERSION': '1.0.0',
+    'SERVE_INCLUDE_SCHEMA': False,
+    'COMPONENT_SPLIT_REQUEST': True,
+    'SCHEMA_PATH_PREFIX': '/api/',
+    'SWAGGER_UI_SETTINGS': {
+        'deepLinking': True,
+        'persistAuthorization': True,
+        'displayOperationId': False,
+        'defaultModelsExpandDepth': 2,
+        'defaultModelExpandDepth': 2,
+        'displayRequestDuration': True,
+        'filter': True,
+    },
+    'REDOC_SETTINGS': {
+        'LAZY_RENDERING': False,
+        'HIDE_DOWNLOAD_BUTTON': False,
+        'EXPAND_RESPONSES': 'all',
+    },
+    # Ensure Swagger works in production
+    'SERVE_PERMISSIONS': ['rest_framework.permissions.AllowAny'],
+    'SERVE_AUTHENTICATION': [],
 }
