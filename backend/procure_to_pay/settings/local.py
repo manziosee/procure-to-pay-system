@@ -1,23 +1,20 @@
 from .base import *
 
+# Local development settings
 DEBUG = True
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': config('DB_NAME', default='postgres'),
-        'USER': config('DB_USER', default='postgres'),
-        'PASSWORD': config('DB_PASSWORD', default='67bC6ShcAyCknv?'),
-        'HOST': config('DB_HOST', default='db.jkxhrolkjbqmwntuarwf.supabase.co'),
-        'PORT': config('DB_PORT', default='5432'),
-        'OPTIONS': {
-            'sslmode': 'require',
-        },
+# Use environment variables or fallback to base settings
+DATABASE_URL = config('DATABASE_URL', default=None)
+if DATABASE_URL:
+    import dj_database_url
+    DATABASES = {
+        'default': dj_database_url.config(
+            default=DATABASE_URL,
+            conn_max_age=600,
+            ssl_require=True,
+        )
     }
-}
+# If no DATABASE_URL, base.py will handle the database configuration
 
-# Disable security features for local development
-SECURE_SSL_REDIRECT = False
-SESSION_COOKIE_SECURE = False
-CSRF_COOKIE_SECURE = False
-SECURE_HSTS_SECONDS = 0
+# Local development CORS
+CORS_ALLOW_ALL_ORIGINS = True

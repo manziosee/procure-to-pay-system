@@ -5,6 +5,7 @@ set -o errexit  # exit on error
 
 echo "🔧 Installing dependencies..."
 pip install -r requirements.txt
+pip install gunicorn
 
 echo "📦 Collecting static files..."
 python manage.py collectstatic --no-input

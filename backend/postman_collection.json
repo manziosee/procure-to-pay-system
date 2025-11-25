@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "Procure-to-Pay System API v2.0",
-    "description": "Updated API collection with Supabase integration, enhanced security, rate limiting, input validation, and AI document processing. Includes all endpoints for authentication, purchase requests, multi-level approvals, and document processing.",
+    "description": "Complete API collection for Procure-to-Pay System with Render PostgreSQL database, JWT authentication, multi-level approval workflow, and AI-powered document processing. Includes all endpoints for user management, purchase requests, approvals, and document processing.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
     "version": "2.0.0"
   },

@@ -30,7 +30,7 @@
 #### **Environment Variables:**
 - ✅ **Flexible configuration** via environment variables
 - ✅ **Render domain** auto-detection
-- ✅ **Supabase** database support
+- ✅ **Render PostgreSQL** database support
 - ✅ **Secret key** auto-generation
 
 ## 🚀 **Quick Deploy Steps:**

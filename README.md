@@ -6,7 +6,7 @@
 [![Docker](https://img.shields.io/badge/Docker-Ready-blue.svg)](https://www.docker.com/)
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-A comprehensive **Procure-to-Pay** system with Django REST API backend and React TypeScript frontend, featuring multi-level approval workflows and AI-powered document processing.
+A comprehensive **Procure-to-Pay** system with Django REST API backend and React TypeScript frontend, featuring multi-level approval workflows, AI-powered document processing, and Render PostgreSQL database.
 
 
 
@@ -66,7 +66,7 @@ A comprehensive **Procure-to-Pay** system with Django REST API backend and React
 </td>
 <td>
 
-- PostgreSQL
+- Render PostgreSQL
 - Redis
 - File Storage
 
