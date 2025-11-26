@@ -2,9 +2,9 @@ import type { RequestStatus, UserRole, ApprovalLevel } from '../types/enums';
 
 export const formatCurrency = (amount: string | number): string => {
   const num = typeof amount === 'string' ? parseFloat(amount) : amount;
-  return new Intl.NumberFormat('en-US', {
+  return new Intl.NumberFormat('en-RW', {
     style: 'currency',
-    currency: 'USD',
+    currency: 'RWF',
   }).format(num);
 };
 

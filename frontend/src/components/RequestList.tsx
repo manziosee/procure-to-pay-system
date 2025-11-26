@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
-import { Eye } from 'lucide-react';
+import { Eye, Edit, Trash2 } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
 import { PurchaseRequest } from '@/types';
 import { formatDate, formatStatus } from '@/utils/formatters';
 import { formatCurrency } from '@/utils/currency';
@@ -19,9 +20,28 @@ import { cn } from '@/lib/utils';
 interface RequestListProps {
   requests?: PurchaseRequest[];
   loading: boolean;
+  onDelete?: (id: number) => void;
 }
 
-export default function RequestList({ requests, loading }: RequestListProps) {
+export default function RequestList({ requests, loading, onDelete }: RequestListProps) {
+  const { user } = useAuth();
+
+  const handleDelete = async (id: number) => {
+    if (!window.confirm('Are you sure you want to delete this request?')) return;
+    
+    try {
+      const { purchaseRequests } = await import('@/services/api');
+      await purchaseRequests.delete(id.toString());
+      
+      // Update global state immediately
+      if (onDelete) onDelete(id);
+      
+      alert('Request deleted successfully!');
+    } catch (error) {
+      console.error('Error deleting request:', error);
+      alert('Failed to delete request');
+    }
+  };
   if (loading) {
     return (
       <Card className="p-8 border-gray-200">
@@ -41,12 +61,32 @@ export default function RequestList({ requests, loading }: RequestListProps) {
   }
 
   const getStatusBadge = (status: string) => {
-    const styles = {
-      pending: 'bg-gradient-to-r from-amber-100 to-orange-100 text-amber-800 border border-amber-300',
-      approved: 'bg-gradient-to-r from-emerald-100 to-green-100 text-emerald-800 border border-emerald-300',
-      rejected: 'bg-gradient-to-r from-rose-100 to-red-100 text-rose-800 border border-rose-300',
-    };
-    return styles[status as keyof typeof styles] || 'bg-gray-100 text-gray-800 border border-gray-300';
+    switch (status) {
+      case 'pending': 
+        return (
+          <Badge className="bg-yellow-100 text-yellow-800 border border-yellow-300 font-semibold px-3 py-1">
+            🕐 PENDING
+          </Badge>
+        );
+      case 'approved': 
+        return (
+          <Badge className="bg-green-100 text-green-800 border border-green-300 font-semibold px-3 py-1">
+            ✅ APPROVED
+          </Badge>
+        );
+      case 'rejected': 
+        return (
+          <Badge className="bg-red-100 text-red-800 border border-red-300 font-semibold px-3 py-1">
+            ❌ REJECTED
+          </Badge>
+        );
+      default: 
+        return (
+          <Badge className="bg-gray-100 text-gray-800 border border-gray-300 font-semibold px-3 py-1">
+            {status.toUpperCase()}
+          </Badge>
+        );
+    }
   };
 
   return (
@@ -68,19 +108,37 @@ export default function RequestList({ requests, loading }: RequestListProps) {
               <TableCell className="font-medium text-black">{request.title}</TableCell>
               <TableCell className="text-black">{formatCurrency(request.amount)}</TableCell>
               <TableCell>
-                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusBadge(request.status)}`}>
-                  {formatStatus(request.status)}
-                </span>
+                {getStatusBadge(request.status)}
               </TableCell>
               <TableCell className="text-black">{request.created_by_name}</TableCell>
               <TableCell className="text-black">{formatDate(request.created_at)}</TableCell>
               <TableCell className="text-right">
-                <Button asChild variant="ghost" size="sm" className="hover:bg-gray-100">
-                  <Link to={`/requests/${request.id}`}>
-                    <Eye className="mr-2 h-4 w-4" />
-                    View
-                  </Link>
-                </Button>
+                <div className="flex justify-end gap-2">
+                  <Button asChild variant="ghost" size="sm" className="hover:bg-gray-100">
+                    <Link to={`/requests/${request.id}`}>
+                      <Eye className="mr-2 h-4 w-4" />
+                      View
+                    </Link>
+                  </Button>
+                  {user?.role === 'staff' && request.status === 'pending' && request.created_by === user.id && (
+                    <>
+                      <Button asChild size="sm" className="bg-blue-600 text-white hover:bg-blue-700">
+                        <Link to={`/requests/${request.id}/edit`}>
+                          <Edit className="mr-1 h-4 w-4" />
+                          Edit
+                        </Link>
+                      </Button>
+                      <Button 
+                        size="sm" 
+                        className="bg-red-600 text-white hover:bg-red-700"
+                        onClick={() => handleDelete(request.id)}
+                      >
+                        <Trash2 className="mr-1 h-4 w-4" />
+                        Delete
+                      </Button>
+                    </>
+                  )}
+                </div>
               </TableCell>
             </TableRow>
           ))}

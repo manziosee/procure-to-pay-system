@@ -43,14 +43,19 @@ api.interceptors.response.use(
           originalRequest.headers.Authorization = `Bearer ${newToken}`;
           return api(originalRequest);
         } catch (refreshError) {
-          // Refresh failed, redirect to login
+          // Refresh failed, clear all auth data and redirect
           localStorage.removeItem('token');
           localStorage.removeItem('refreshToken');
+          localStorage.removeItem('currentUser');
+          localStorage.removeItem('loginTime');
           window.location.href = '/login';
         }
       } else {
-        // No refresh token, redirect to login
+        // No refresh token, clear all auth data and redirect
         localStorage.removeItem('token');
+        localStorage.removeItem('refreshToken');
+        localStorage.removeItem('currentUser');
+        localStorage.removeItem('loginTime');
         window.location.href = '/login';
       }
     }
@@ -87,6 +92,8 @@ export const auth = {
     
     localStorage.removeItem('token');
     localStorage.removeItem('refreshToken');
+    localStorage.removeItem('currentUser');
+    localStorage.removeItem('loginTime');
     return logoutPromise;
   }
 };
@@ -110,18 +117,21 @@ export const purchaseRequests = {
   update: (id: string, data: any) => api.put(`/requests/${id}/`, data),
 
   // Partially update a purchase request
-  partialUpdate: (id: string, data: any) => api.patch(`/requests/${id}/`, data),
+  partialUpdate: (id: string, data: FormData | any) => {
+    const headers = data instanceof FormData ? { 'Content-Type': 'multipart/form-data' } : {};
+    return api.patch(`/requests/${id}/`, data, { headers });
+  },
 
   // Delete a purchase request
   delete: (id: string) => api.delete(`/requests/${id}/`),
 
   // Approve a purchase request
-  approve: (id: string) => api.patch(`/requests/${id}/approve/`),
+  approve: (id: string, comments?: string) => api.patch(`/requests/${id}/approve/`, { comments: comments || '' }),
 
   // Reject a purchase request with a reason
   reject: (id: string, reason: string) => api.patch(`/requests/${id}/reject/`, { reason }),
 
-  // Submit a receipt for a purchase request
+  // Submit receipt (includes AI validation)
   submitReceipt: (id: string, file: File) => {
     const formData = new FormData();
     formData.append('receipt', file);
@@ -152,7 +162,7 @@ export const proforma = {
   // Upload proforma
   upload: (file: File) => {
     const formData = new FormData();
-    formData.append('proforma', file);
+    formData.append('file', file);
     return api.post('/proforma/proforma/upload/', formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
@@ -167,7 +177,7 @@ export const proforma = {
   // Validate receipt against PO
   validateReceipt: (poId: string, file: File) => {
     const formData = new FormData();
-    formData.append('receipt', file);
+    formData.append('file', file);
     return api.post(`/proforma/po/${poId}/validate-receipt/`, formData, {
       headers: {
         'Content-Type': 'multipart/form-data',

@@ -100,7 +100,7 @@ export default function Register() {
                     <Input
                       id="first_name"
                       type="text"
-                      placeholder="John"
+                      placeholder="First Name"
                       value={formData.first_name}
                       onChange={(e) => setFormData({...formData, first_name: e.target.value})}
                       required
@@ -113,7 +113,7 @@ export default function Register() {
                     <Input
                       id="last_name"
                       type="text"
-                      placeholder="Doe"
+                      placeholder="Last Name"
                       value={formData.last_name}
                       onChange={(e) => setFormData({...formData, last_name: e.target.value})}
                       required
@@ -128,7 +128,7 @@ export default function Register() {
                   <Input
                     id="username"
                     type="text"
-                    placeholder="johndoe"
+                    placeholder="Username"
                     value={formData.username}
                     onChange={(e) => setFormData({...formData, username: e.target.value})}
                     required
@@ -142,7 +142,7 @@ export default function Register() {
                   <Input
                     id="email"
                     type="email"
-                    placeholder="john.doe@company.com"
+                    placeholder="Email"
                     value={formData.email}
                     onChange={(e) => setFormData({...formData, email: e.target.value})}
                     required

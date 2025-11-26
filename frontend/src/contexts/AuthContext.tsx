@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import type { User, LoginCredentials } from '@/types';
 import { auth as authAPI } from '@/services/api';
 
@@ -67,18 +68,63 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
 
-  useEffect(() => {
-    // Simulate loading time
-    const timer = setTimeout(() => {
-      const savedUser = localStorage.getItem('currentUser');
-      if (savedUser) {
-        setUser(JSON.parse(savedUser));
-      }
-      setLoading(false);
-    }, 500);
+  // Check if token is expired
+  const isTokenExpired = (token: string): boolean => {
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      return payload.exp * 1000 < Date.now();
+    } catch {
+      return true;
+    }
+  };
 
-    return () => clearTimeout(timer);
+  // Validate session on app load and route changes
+  const validateSession = async () => {
+    const token = localStorage.getItem('token');
+    const savedUser = localStorage.getItem('currentUser');
+    
+    if (!token || !savedUser || isTokenExpired(token)) {
+      // Clear invalid session
+      localStorage.removeItem('token');
+      localStorage.removeItem('refreshToken');
+      localStorage.removeItem('currentUser');
+      setUser(null);
+      setLoading(false);
+      return;
+    }
+
+    try {
+      // Verify token with backend
+      await authAPI.getProfile();
+      setUser(JSON.parse(savedUser));
+    } catch (error) {
+      // Token invalid, clear session
+      localStorage.removeItem('token');
+      localStorage.removeItem('refreshToken');
+      localStorage.removeItem('currentUser');
+      setUser(null);
+    }
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    validateSession();
   }, []);
+
+  // Check session on visibility change (tab switch/copy-paste)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && user) {
+        const token = localStorage.getItem('token');
+        if (!token || isTokenExpired(token)) {
+          logout();
+        }
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [user]);
 
   const login = async (credentials: LoginCredentials): Promise<User> => {
     try {
@@ -89,6 +135,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       
       const userData = response.user;
       localStorage.setItem('currentUser', JSON.stringify(userData));
+      localStorage.setItem('loginTime', Date.now().toString());
       setUser(userData);
       return userData;
     } catch (error) {
@@ -104,6 +151,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       console.error('Logout error:', error);
     } finally {
       localStorage.removeItem('currentUser');
+      localStorage.removeItem('token');
+      localStorage.removeItem('refreshToken');
+      localStorage.removeItem('loginTime');
       setUser(null);
     }
   };
