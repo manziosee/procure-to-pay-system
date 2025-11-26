@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { FileUpload } from '@/components/FileUpload';
+import { useRequestsSync } from '@/hooks/useRequestsSync';
 import {
   Table,
   TableBody,
@@ -26,61 +27,16 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 
-// Mock data for finance dashboard
-const mockRequests: PurchaseRequest[] = [
-  {
-    id: 1,
-    title: 'Office Supplies',
-    description: 'Pens, papers, and other office supplies',
-    amount: '250.00',
-    status: 'approved',
-    created_by: 1,
-    created_by_name: 'John Staff',
-    created_at: '2024-01-15T10:00:00Z',
-    updated_at: '2024-01-15T10:00:00Z',
-    approvals: []
-  },
-  {
-    id: 2,
-    title: 'Laptop Computer',
-    description: 'Dell Laptop for new employee',
-    amount: '1200.00',
-    status: 'approved',
-    created_by: 1,
-    created_by_name: 'John Staff',
-    created_at: '2024-01-10T09:00:00Z',
-    updated_at: '2024-01-12T14:00:00Z',
-    approvals: []
-  },
-  {
-    id: 3,
-    title: 'Software License',
-    description: 'Adobe Creative Suite license',
-    amount: '600.00',
-    status: 'pending',
-    created_by: 1,
-    created_by_name: 'John Staff',
-    created_at: '2024-01-08T11:00:00Z',
-    updated_at: '2024-01-09T16:00:00Z',
-    approvals: []
-  }
-];
+
 
 export default function FinanceDashboard() {
   const { user } = useAuth();
-  const [requests, setRequests] = useState<PurchaseRequest[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const { requests, isLoading, loadRequests } = useRequestsSync();
   const [uploadFile, setUploadFile] = useState<File | null>(null);
 
   useEffect(() => {
-    // Simulate API loading
-    const timer = setTimeout(() => {
-      setRequests(mockRequests);
-      setIsLoading(false);
-    }, 1000);
-
-    return () => clearTimeout(timer);
-  }, []);
+    loadRequests();
+  }, [loadRequests]);
 
   // Check if user is finance
   if (user?.role !== 'finance') {
@@ -102,12 +58,32 @@ export default function FinanceDashboard() {
     .filter(req => req.status === 'pending')
     .reduce((sum, req) => sum + parseFloat(req.amount), 0);
 
-  const getStatusVariant = (status: string): "default" | "secondary" | "destructive" => {
+  const getStatusBadge = (status: string) => {
     switch (status) {
-      case 'pending': return 'secondary';
-      case 'approved': return 'default';
-      case 'rejected': return 'destructive';
-      default: return 'secondary';
+      case 'pending': 
+        return (
+          <Badge className="bg-yellow-100 text-yellow-800 border border-yellow-300 font-semibold px-3 py-1">
+            🕐 PENDING
+          </Badge>
+        );
+      case 'approved': 
+        return (
+          <Badge className="bg-green-100 text-green-800 border border-green-300 font-semibold px-3 py-1">
+            ✅ APPROVED
+          </Badge>
+        );
+      case 'rejected': 
+        return (
+          <Badge className="bg-red-100 text-red-800 border border-red-300 font-semibold px-3 py-1">
+            ❌ REJECTED
+          </Badge>
+        );
+      default: 
+        return (
+          <Badge className="bg-gray-100 text-gray-800 border border-gray-300 font-semibold px-3 py-1">
+            {status.toUpperCase()}
+          </Badge>
+        );
     }
   };
 
@@ -181,47 +157,55 @@ export default function FinanceDashboard() {
 
       {/* Financial Stats */}
       <div className="grid gap-4 md:grid-cols-4">
-        <Card className="border-gray-200 hover:border-black transition-all duration-300 hover:scale-105 transform hover:shadow-lg">
+        <Card className="border-blue-200 bg-gradient-to-br from-blue-50 to-blue-100 hover:border-blue-400 transition-all duration-300 hover:scale-105 transform hover:shadow-xl">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-black">Total Requests</CardTitle>
-            <FileText className="h-4 w-4 text-gray-600" />
+            <CardTitle className="text-sm font-medium text-blue-800">Total Requests</CardTitle>
+            <div className="h-8 w-8 bg-blue-200 rounded-full flex items-center justify-center">
+              📄
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-black">{requests.length}</div>
-            <p className="text-xs text-gray-600">All purchase requests</p>
+            <div className="text-3xl font-bold text-blue-900">{requests.length}</div>
+            <p className="text-xs text-blue-700 font-medium">All purchase requests</p>
           </CardContent>
         </Card>
 
-        <Card className="border-gray-200 hover:border-black transition-all duration-300 hover:scale-105 transform hover:shadow-lg">
+        <Card className="border-purple-200 bg-gradient-to-br from-purple-50 to-purple-100 hover:border-purple-400 transition-all duration-300 hover:scale-105 transform hover:shadow-xl">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-black">Total Amount</CardTitle>
-            <DollarSign className="h-4 w-4 text-gray-600" />
+            <CardTitle className="text-sm font-medium text-purple-800">Total Amount</CardTitle>
+            <div className="h-8 w-8 bg-purple-200 rounded-full flex items-center justify-center">
+              💰
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-black">{formatCurrency(totalAmount)}</div>
-            <p className="text-xs text-gray-600">All requests combined</p>
+            <div className="text-3xl font-bold text-purple-900">{formatCurrency(totalAmount)}</div>
+            <p className="text-xs text-purple-700 font-medium">All requests combined</p>
           </CardContent>
         </Card>
 
-        <Card className="border-gray-200 hover:border-black transition-all duration-300 hover:scale-105 transform hover:shadow-lg">
+        <Card className="border-green-200 bg-gradient-to-br from-green-50 to-green-100 hover:border-green-400 transition-all duration-300 hover:scale-105 transform hover:shadow-xl">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-black">Approved Amount</CardTitle>
-            <TrendingUp className="h-4 w-4 text-gray-600" />
+            <CardTitle className="text-sm font-medium text-green-800">Approved Amount</CardTitle>
+            <div className="h-8 w-8 bg-green-200 rounded-full flex items-center justify-center">
+              ✅
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-black">{formatCurrency(approvedAmount)}</div>
-            <p className="text-xs text-gray-600">Ready for payment</p>
+            <div className="text-3xl font-bold text-green-900">{formatCurrency(approvedAmount)}</div>
+            <p className="text-xs text-green-700 font-medium">Ready for payment</p>
           </CardContent>
         </Card>
 
-        <Card className="border-gray-200 hover:border-black transition-all duration-300 hover:scale-105 transform hover:shadow-lg">
+        <Card className="border-yellow-200 bg-gradient-to-br from-yellow-50 to-yellow-100 hover:border-yellow-400 transition-all duration-300 hover:scale-105 transform hover:shadow-xl">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-black">Pending Amount</CardTitle>
-            <DollarSign className="h-4 w-4 text-gray-600" />
+            <CardTitle className="text-sm font-medium text-yellow-800">Pending Amount</CardTitle>
+            <div className="h-8 w-8 bg-yellow-200 rounded-full flex items-center justify-center">
+              🕐
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-black">{formatCurrency(pendingAmount)}</div>
-            <p className="text-xs text-gray-600">Awaiting approval</p>
+            <div className="text-3xl font-bold text-yellow-900">{formatCurrency(pendingAmount)}</div>
+            <p className="text-xs text-yellow-700 font-medium">Awaiting approval</p>
           </CardContent>
         </Card>
       </div>
@@ -259,9 +243,7 @@ export default function FinanceDashboard() {
                     <TableCell className="font-medium text-black">{request.title}</TableCell>
                     <TableCell className="text-black">{formatCurrency(request.amount)}</TableCell>
                     <TableCell>
-                      <Badge variant={getStatusVariant(request.status)} className="text-xs">
-                        {request.status.toUpperCase()}
-                      </Badge>
+                      {getStatusBadge(request.status)}
                     </TableCell>
                     <TableCell className="text-black">{request.created_by_name}</TableCell>
                     <TableCell className="text-black">{formatDate(request.created_at)}</TableCell>

@@ -11,6 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
+import { useRequestsSync } from '@/hooks/useRequestsSync';
 import {
   Table,
   TableBody,
@@ -74,18 +75,17 @@ const mockRequests: PurchaseRequest[] = [
 
 export default function Approvals() {
   const { user } = useAuth();
+  const { requests: allRequests, isLoading, loadRequests } = useRequestsSync();
   const [requests, setRequests] = useState<PurchaseRequest[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Simulate API loading
-    const timer = setTimeout(() => {
-      setRequests(mockRequests);
-      setIsLoading(false);
-    }, 1000);
+    loadRequests();
+  }, [loadRequests]);
 
-    return () => clearTimeout(timer);
-  }, []);
+  useEffect(() => {
+    // Filter requests for approvers (pending requests)
+    setRequests(allRequests.filter(req => req.status === 'pending'));
+  }, [allRequests]);
 
   // Check if user is an approver
   if (!user?.role?.includes('approver')) {
@@ -102,12 +102,32 @@ export default function Approvals() {
   const pendingRequests = requests.filter(req => req.status === 'pending');
   const reviewedRequests = requests.filter(req => req.status !== 'pending');
 
-  const getStatusVariant = (status: string): "default" | "secondary" | "destructive" => {
+  const getStatusBadge = (status: string) => {
     switch (status) {
-      case 'pending': return 'secondary';
-      case 'approved': return 'default';
-      case 'rejected': return 'destructive';
-      default: return 'secondary';
+      case 'pending': 
+        return (
+          <Badge className="bg-yellow-100 text-yellow-800 border border-yellow-300 font-semibold px-3 py-1">
+            🕐 PENDING
+          </Badge>
+        );
+      case 'approved': 
+        return (
+          <Badge className="bg-green-100 text-green-800 border border-green-300 font-semibold px-3 py-1">
+            ✅ APPROVED
+          </Badge>
+        );
+      case 'rejected': 
+        return (
+          <Badge className="bg-red-100 text-red-800 border border-red-300 font-semibold px-3 py-1">
+            ❌ REJECTED
+          </Badge>
+        );
+      default: 
+        return (
+          <Badge className="bg-gray-100 text-gray-800 border border-gray-300 font-semibold px-3 py-1">
+            {status.toUpperCase()}
+          </Badge>
+        );
     }
   };
 
@@ -118,12 +138,13 @@ export default function Approvals() {
 
   const handleApprove = async (request: PurchaseRequest) => {
     try {
-      console.log('Approving request:', request.id);
-      // Here you would call the API
-      // await purchaseRequests.approve(request.id);
+      const { purchaseRequests } = await import('@/services/api');
+      await purchaseRequests.approve(request.id.toString());
       alert('Request approved successfully!');
       setApproveDialogOpen(false);
       setSelectedRequest(null);
+      // Reload requests
+      window.location.reload();
     } catch (error) {
       console.error('Error approving request:', error);
       alert('Failed to approve request');
@@ -136,13 +157,14 @@ export default function Approvals() {
       return;
     }
     try {
-      console.log('Rejecting request:', request.id, 'Reason:', rejectReason);
-      // Here you would call the API
-      // await purchaseRequests.reject(request.id, rejectReason);
+      const { purchaseRequests } = await import('@/services/api');
+      await purchaseRequests.reject(request.id.toString(), rejectReason);
       alert('Request rejected successfully!');
       setRejectDialogOpen(false);
       setSelectedRequest(null);
       setRejectReason('');
+      // Reload requests
+      window.location.reload();
     } catch (error) {
       console.error('Error rejecting request:', error);
       alert('Failed to reject request');
@@ -168,9 +190,7 @@ export default function Approvals() {
               <TableCell className="font-medium text-black">{request.title}</TableCell>
               <TableCell className="text-black">{formatCurrency(request.amount)}</TableCell>
               <TableCell>
-                <Badge variant={getStatusVariant(request.status)} className="text-xs">
-                  {request.status.toUpperCase()}
-                </Badge>
+                {getStatusBadge(request.status)}
               </TableCell>
               <TableCell className="text-black">{request.created_by_name}</TableCell>
               <TableCell className="text-black">{formatDate(request.created_at)}</TableCell>
@@ -195,24 +215,26 @@ export default function Approvals() {
                             Approve
                           </Button>
                         </DialogTrigger>
-                        <DialogContent className="bg-white border border-gray-300 shadow-xl">
-                          <DialogHeader>
-                            <DialogTitle className="text-black">Approve Request</DialogTitle>
-                            <DialogDescription className="text-gray-600">
-                              Are you sure you want to approve "{selectedRequest?.title}"?
-                            </DialogDescription>
-                          </DialogHeader>
-                          <DialogFooter>
-                            <Button variant="outline" onClick={() => setApproveDialogOpen(false)}>
-                              Cancel
-                            </Button>
-                            <Button 
-                              className="bg-green-600 text-white hover:bg-green-700"
-                              onClick={() => selectedRequest && handleApprove(selectedRequest)}
-                            >
-                              Approve
-                            </Button>
-                          </DialogFooter>
+                        <DialogContent className="bg-white border border-gray-300 shadow-xl max-w-md mx-auto">
+                          <div className="bg-white p-6 rounded-lg">
+                            <DialogHeader>
+                              <DialogTitle className="text-black text-xl font-semibold">Approve Request</DialogTitle>
+                              <DialogDescription className="text-gray-600 mt-2">
+                                Are you sure you want to approve "{selectedRequest?.title}"?
+                              </DialogDescription>
+                            </DialogHeader>
+                            <DialogFooter className="mt-6 flex gap-3">
+                              <Button variant="outline" onClick={() => setApproveDialogOpen(false)} className="border-gray-300">
+                                Cancel
+                              </Button>
+                              <Button 
+                                className="bg-green-600 text-white hover:bg-green-700"
+                                onClick={() => selectedRequest && handleApprove(selectedRequest)}
+                              >
+                                Approve
+                              </Button>
+                            </DialogFooter>
+                          </div>
                         </DialogContent>
                       </Dialog>
 
@@ -220,45 +242,47 @@ export default function Approvals() {
                         <DialogTrigger asChild>
                           <Button 
                             size="sm" 
-                            style={{ backgroundColor: '#dc2626', color: 'white', border: '2px solid #dc2626' }}
-                            className="hover:bg-red-700 shadow-lg font-bold px-4 py-2 rounded transition-all duration-300 hover:scale-105"
+                            className="bg-red-600 text-white hover:bg-red-700 border-2 border-red-600 hover:border-red-700 shadow-lg font-bold px-4 py-2 rounded transition-all duration-300 hover:scale-105"
                             onClick={() => setSelectedRequest(request)}
                           >
                             <XCircle className="mr-1 h-4 w-4" />
                             Reject
                           </Button>
                         </DialogTrigger>
-                        <DialogContent className="bg-white border border-gray-300 shadow-xl">
-                          <DialogHeader>
-                            <DialogTitle className="text-black">Reject Request</DialogTitle>
-                            <DialogDescription className="text-gray-600">
-                              Please provide a reason for rejecting "{selectedRequest?.title}".
-                            </DialogDescription>
-                          </DialogHeader>
-                          <div className="space-y-2">
-                            <Label htmlFor="reason" className="text-black">Reason for rejection</Label>
-                            <Textarea
-                              id="reason"
-                              placeholder="Enter reason for rejection..."
-                              value={rejectReason}
-                              onChange={(e) => setRejectReason(e.target.value)}
-                              className="border-gray-300 focus:border-black focus:ring-black"
-                            />
+                        <DialogContent className="bg-white border border-gray-300 shadow-xl max-w-md mx-auto">
+                          <div className="bg-white p-6 rounded-lg">
+                            <DialogHeader>
+                              <DialogTitle className="text-black text-xl font-semibold">Reject Request</DialogTitle>
+                              <DialogDescription className="text-gray-600 mt-2">
+                                Please provide a reason for rejecting "{selectedRequest?.title}".
+                              </DialogDescription>
+                            </DialogHeader>
+                            <div className="space-y-3 mt-4">
+                              <Label htmlFor="reason" className="text-black font-medium">Reason for rejection</Label>
+                              <Textarea
+                                id="reason"
+                                placeholder="Enter reason for rejection..."
+                                value={rejectReason}
+                                onChange={(e) => setRejectReason(e.target.value)}
+                                className="border-gray-300 focus:border-black focus:ring-black bg-white min-h-[100px]"
+                              />
+                            </div>
+                            <DialogFooter className="mt-6 flex gap-3">
+                              <Button variant="outline" onClick={() => {
+                                setRejectDialogOpen(false);
+                                setRejectReason('');
+                              }} className="border-gray-300">
+                                Cancel
+                              </Button>
+                              <Button 
+                                variant="destructive"
+                                onClick={() => selectedRequest && handleReject(selectedRequest)}
+                                className="bg-red-600 hover:bg-red-700"
+                              >
+                                Reject
+                              </Button>
+                            </DialogFooter>
                           </div>
-                          <DialogFooter>
-                            <Button variant="outline" onClick={() => {
-                              setRejectDialogOpen(false);
-                              setRejectReason('');
-                            }}>
-                              Cancel
-                            </Button>
-                            <Button 
-                              variant="destructive"
-                              onClick={() => selectedRequest && handleReject(selectedRequest)}
-                            >
-                              Reject
-                            </Button>
-                          </DialogFooter>
                         </DialogContent>
                       </Dialog>
                     </>
@@ -299,40 +323,46 @@ export default function Approvals() {
 
       {/* Stats Cards */}
       <div className="grid gap-4 md:grid-cols-3">
-        <Card className="border-gray-200 hover:border-black transition-all duration-300 hover:scale-105 transform hover:shadow-lg">
+        <Card className="border-yellow-200 bg-gradient-to-br from-yellow-50 to-yellow-100 hover:border-yellow-400 transition-all duration-300 hover:scale-105 transform hover:shadow-xl">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-black">Pending Approval</CardTitle>
-            <CheckCircle className="h-4 w-4 text-gray-600" />
+            <CardTitle className="text-sm font-medium text-yellow-800">Pending Approval</CardTitle>
+            <div className="h-8 w-8 bg-yellow-200 rounded-full flex items-center justify-center">
+              🕐
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-black">{pendingRequests.length}</div>
-            <p className="text-xs text-gray-600">Awaiting your review</p>
+            <div className="text-3xl font-bold text-yellow-900">{pendingRequests.length}</div>
+            <p className="text-xs text-yellow-700 font-medium">Awaiting your review</p>
           </CardContent>
         </Card>
 
-        <Card className="border-gray-200 hover:border-black transition-all duration-300 hover:scale-105 transform hover:shadow-lg">
+        <Card className="border-green-200 bg-gradient-to-br from-green-50 to-green-100 hover:border-green-400 transition-all duration-300 hover:scale-105 transform hover:shadow-xl">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-black">Approved</CardTitle>
-            <CheckCircle className="h-4 w-4 text-gray-600" />
+            <CardTitle className="text-sm font-medium text-green-800">Approved</CardTitle>
+            <div className="h-8 w-8 bg-green-200 rounded-full flex items-center justify-center">
+              ✅
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-black">
+            <div className="text-3xl font-bold text-green-900">
               {reviewedRequests.filter(r => r.status === 'approved').length}
             </div>
-            <p className="text-xs text-gray-600">Successfully approved</p>
+            <p className="text-xs text-green-700 font-medium">Successfully approved</p>
           </CardContent>
         </Card>
 
-        <Card className="border-gray-200 hover:border-black transition-all duration-300 hover:scale-105 transform hover:shadow-lg">
+        <Card className="border-red-200 bg-gradient-to-br from-red-50 to-red-100 hover:border-red-400 transition-all duration-300 hover:scale-105 transform hover:shadow-xl">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-black">Rejected</CardTitle>
-            <XCircle className="h-4 w-4 text-gray-600" />
+            <CardTitle className="text-sm font-medium text-red-800">Rejected</CardTitle>
+            <div className="h-8 w-8 bg-red-200 rounded-full flex items-center justify-center">
+              ❌
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-black">
+            <div className="text-3xl font-bold text-red-900">
               {reviewedRequests.filter(r => r.status === 'rejected').length}
             </div>
-            <p className="text-xs text-gray-600">Declined requests</p>
+            <p className="text-xs text-red-700 font-medium">Declined requests</p>
           </CardContent>
         </Card>
       </div>
@@ -340,11 +370,11 @@ export default function Approvals() {
       {/* Tabs for different views */}
       <Tabs defaultValue="pending" className="space-y-4">
         <TabsList className="bg-gray-100 border border-gray-200">
-          <TabsTrigger value="pending" className="data-[state=active]:bg-black data-[state=active]:text-white">
-            Pending ({pendingRequests.length})
+          <TabsTrigger value="pending" className="data-[state=active]:bg-yellow-500 data-[state=active]:text-white font-semibold">
+            🕐 Pending ({pendingRequests.length})
           </TabsTrigger>
-          <TabsTrigger value="reviewed" className="data-[state=active]:bg-black data-[state=active]:text-white">
-            Reviewed ({reviewedRequests.length})
+          <TabsTrigger value="reviewed" className="data-[state=active]:bg-black data-[state=active]:text-white font-semibold">
+            📄 Reviewed ({reviewedRequests.length})
           </TabsTrigger>
         </TabsList>
 

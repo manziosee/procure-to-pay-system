@@ -25,17 +25,27 @@ export default function EditRequest() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [request, setRequest] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Mock request data - replace with API call
-  const mockRequest = {
-    id: Number(id),
-    title: 'Office Supplies Request',
-    description: 'Monthly office supplies including pens, papers, and folders',
-    amount: '250.00',
-    status: 'pending' as const,
-    created_by: user?.id || 1,
-    proforma: undefined
-  };
+  useEffect(() => {
+    const loadRequest = async () => {
+      if (!id) return;
+      try {
+        const { purchaseRequests } = await import('@/services/api');
+        const response = await purchaseRequests.getById(id);
+        setRequest(response.data);
+      } catch (error) {
+        console.error('Error loading request:', error);
+        alert('Failed to load request');
+        navigate('/');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadRequest();
+  }, [id, navigate]);
 
   const {
     register,
@@ -43,19 +53,34 @@ export default function EditRequest() {
     formState: { errors },
     setValue,
     watch,
+    reset,
   } = useForm<EditRequestFormData>({
     resolver: zodResolver(editRequestSchema),
-    defaultValues: {
-      title: mockRequest.title,
-      description: mockRequest.description,
-      amount: parseFloat(mockRequest.amount),
-    }
   });
+
+  // Update form when request data loads
+  useEffect(() => {
+    if (request) {
+      reset({
+        title: request.title,
+        description: request.description,
+        amount: parseFloat(request.amount),
+      });
+    }
+  }, [request, reset]);
 
   const proformaFile = watch('proforma');
 
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center min-h-[400px]">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-black"></div>
+      </div>
+    );
+  }
+
   // Check if user can edit this request
-  if (user?.role !== 'staff' || mockRequest.status !== 'pending') {
+  if (!request || user?.role !== 'staff' || request.status !== 'pending' || request.created_by !== user.id) {
     return (
       <div className="text-center py-12">
         <p className="text-gray-600 mb-4">You cannot edit this request</p>
@@ -69,13 +94,27 @@ export default function EditRequest() {
   const onSubmit = async (data: EditRequestFormData) => {
     setIsSubmitting(true);
     
-    // Simulate API call
-    setTimeout(() => {
-      console.log('Request updated:', data);
+    try {
+      const formData = new FormData();
+      formData.append('title', data.title);
+      formData.append('description', data.description);
+      formData.append('amount', data.amount.toString());
+      
+      if (data.proforma) {
+        formData.append('proforma', data.proforma);
+      }
+      
+      const { purchaseRequests } = await import('@/services/api');
+      await purchaseRequests.partialUpdate(id!, formData);
+      
       alert('Request updated successfully!');
       navigate(`/requests/${id}`);
+    } catch (error) {
+      console.error('Error updating request:', error);
+      alert('Failed to update request');
+    } finally {
       setIsSubmitting(false);
-    }, 1500);
+    }
   };
 
   return (

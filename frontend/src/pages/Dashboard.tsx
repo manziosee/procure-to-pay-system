@@ -6,6 +6,7 @@ import RequestList from '@/components/RequestList';
 import { PurchaseRequest } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useRequestsSync } from '@/hooks/useRequestsSync';
 
 // Mock data for demo
 const mockRequests: PurchaseRequest[] = [
@@ -55,49 +56,26 @@ interface Stats {
 
 export default function Dashboard() {
   const { user } = useAuth();
-  const [requests, setRequests] = useState<PurchaseRequest[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const { requests, isLoading, loadRequests, deleteRequest } = useRequestsSync();
+  const [filteredRequests, setFilteredRequests] = useState<PurchaseRequest[]>([]);
 
   useEffect(() => {
-    const loadRequests = async () => {
-      try {
-        const { purchaseRequests } = await import('@/services/api');
-        const response = await purchaseRequests.getAll();
-        let allRequests = response.data.results || response.data || [];
-        
-        // Filter based on user role
-        if (user?.role === 'staff') {
-          // Staff can only see their own requests
-          allRequests = allRequests.filter((req: any) => req.created_by === user.id);
-        } else if (user?.role?.includes('approver')) {
-          // Approvers see pending requests and their reviewed requests
-          allRequests = allRequests.filter((req: any) => 
-            req.status === 'pending' || req.approved_by === user.id
-          );
-        }
-        // Finance sees all requests
-        
-        setRequests(allRequests);
-      } catch (error) {
-        console.error('Error loading requests:', error);
-        // Fallback to mock data with role filtering
-        let filteredRequests = mockRequests;
-        if (user?.role === 'staff') {
-          filteredRequests = mockRequests.filter(req => req.created_by === user.id);
-        }
-        setRequests(filteredRequests);
-      } finally {
-        setIsLoading(false);
-      }
-    };
+    if (user) loadRequests();
+  }, [user, loadRequests]);
 
-    loadRequests();
-  }, [user]);
+  useEffect(() => {
+    // Filter requests based on user role
+    let filtered = requests;
+    if (user?.role === 'staff') {
+      filtered = requests.filter(req => req.created_by === user.id);
+    }
+    setFilteredRequests(filtered);
+  }, [requests, user]);
 
   const getStats = (): Stats => {
-    if (!requests) return { pending: 0, approved: 0, rejected: 0 };
+    if (!filteredRequests) return { pending: 0, approved: 0, rejected: 0 };
     
-    return requests.reduce((acc: Stats, req) => {
+    return filteredRequests.reduce((acc: Stats, req) => {
       acc[req.status] = (acc[req.status] || 0) + 1;
       return acc;
     }, { pending: 0, approved: 0, rejected: 0 });
@@ -145,47 +123,57 @@ export default function Dashboard() {
       </div>
 
       <div className="grid gap-4 md:grid-cols-3">
-        <Card className="border-gray-200 hover:border-black transition-all duration-300 hover:scale-105 transform hover:shadow-lg bg-white">
+        <Card className="border-yellow-200 bg-gradient-to-br from-yellow-50 to-yellow-100 hover:border-yellow-400 transition-all duration-300 hover:scale-105 transform hover:shadow-xl">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Pending</CardTitle>
-            <Clock className="h-4 w-4 text-amber-600" />
+            <CardTitle className="text-sm font-medium text-yellow-800">Pending</CardTitle>
+            <div className="h-8 w-8 bg-yellow-200 rounded-full flex items-center justify-center">
+              🕐
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-black">{stats.pending}</div>
-            <p className="text-xs text-gray-600">
+            <div className="text-3xl font-bold text-yellow-900">{stats.pending}</div>
+            <p className="text-xs text-yellow-700 font-medium">
               Awaiting approval
             </p>
           </CardContent>
         </Card>
 
-        <Card className="border-gray-200 hover:border-black transition-all duration-300 hover:scale-105 transform hover:shadow-lg bg-white">
+        <Card className="border-green-200 bg-gradient-to-br from-green-50 to-green-100 hover:border-green-400 transition-all duration-300 hover:scale-105 transform hover:shadow-xl">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Approved</CardTitle>
-            <CheckCircle className="h-4 w-4 text-green-600" />
+            <CardTitle className="text-sm font-medium text-green-800">Approved</CardTitle>
+            <div className="h-8 w-8 bg-green-200 rounded-full flex items-center justify-center">
+              ✅
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-black">{stats.approved}</div>
-            <p className="text-xs text-gray-600">
+            <div className="text-3xl font-bold text-green-900">{stats.approved}</div>
+            <p className="text-xs text-green-700 font-medium">
               Successfully approved
             </p>
           </CardContent>
         </Card>
 
-        <Card className="border-gray-200 hover:border-black transition-all duration-300 hover:scale-105 transform hover:shadow-lg bg-white">
+        <Card className="border-red-200 bg-gradient-to-br from-red-50 to-red-100 hover:border-red-400 transition-all duration-300 hover:scale-105 transform hover:shadow-xl">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Rejected</CardTitle>
-            <XCircle className="h-4 w-4 text-red-600" />
+            <CardTitle className="text-sm font-medium text-red-800">Rejected</CardTitle>
+            <div className="h-8 w-8 bg-red-200 rounded-full flex items-center justify-center">
+              ❌
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-black">{stats.rejected}</div>
-            <p className="text-xs text-gray-600">
+            <div className="text-3xl font-bold text-red-900">{stats.rejected}</div>
+            <p className="text-xs text-red-700 font-medium">
               Declined requests
             </p>
           </CardContent>
         </Card>
       </div>
 
-      <RequestList requests={requests} loading={isLoading} />
+      <RequestList 
+        requests={filteredRequests} 
+        loading={isLoading} 
+        onDelete={deleteRequest}
+      />
     </div>
   );
 }

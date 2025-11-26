@@ -1,5 +1,5 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
-import { Component, ReactNode } from 'react';
+import { Component, ReactNode, useEffect } from 'react';
 import { useAuth } from './contexts/AuthContext';
 import Landing from './pages/Landing';
 import Login from './pages/Login';
@@ -10,9 +10,11 @@ import EditRequest from './pages/EditRequest';
 import RequestDetail from './pages/RequestDetail';
 import Approvals from './pages/Approvals';
 import FinanceDashboard from './pages/FinanceDashboard';
+import Profile from './pages/Profile';
 import TestLanding from './pages/TestLanding';
 import Unauthorized from './pages/Unauthorized';
 import Navbar from './components/Navbar';
+import { SessionMonitor } from './components/SessionMonitor';
 
 import { RoleBasedRoute } from './components/RoleBasedRoute';
 
@@ -53,6 +55,23 @@ class ErrorBoundary extends Component<
 function App() {
   const { user, loading } = useAuth();
 
+  // Auto-logout on route changes if session invalid
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (user && (!token || isTokenExpired(token))) {
+      window.location.href = '/login';
+    }
+  }, [user, window.location.pathname]);
+
+  const isTokenExpired = (token: string): boolean => {
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      return payload.exp * 1000 < Date.now();
+    } catch {
+      return true;
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -76,6 +95,7 @@ function App() {
 
   return (
     <ErrorBoundary>
+      <SessionMonitor />
       <div className="min-h-screen bg-white">
         <Navbar />
         <main className="container mx-auto px-4 py-8">
@@ -102,6 +122,7 @@ function App() {
             
             {/* Common Routes - Accessible to all authenticated users */}
             <Route path="/requests/:id" element={<RequestDetail />} />
+            <Route path="/profile" element={<Profile />} />
             <Route path="/unauthorized" element={<Unauthorized />} />
             <Route path="/test" element={<TestLanding />} />
 
