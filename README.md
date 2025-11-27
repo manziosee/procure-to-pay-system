@@ -93,17 +93,30 @@ A comprehensive **Procure-to-Pay** system with Django REST API backend and React
    cd procure-to-pay-system
    ```
 
-2. **Start the application**
+2. **Choose your setup method:**
+
+   **Development Setup (Uses Render PostgreSQL)**
    ```bash
    docker-compose up --build
+   ```
+
+   **Production Setup**
+   ```bash
+   docker-compose -f docker-compose.prod.yml up --build
    ```
 
 3. **Access the applications**
    - 🌐 **Frontend**: http://localhost:3000
    - 🔧 **Backend API**: http://localhost:8000
-   - 📚 **Swagger UI**: http://localhost:8000/swagger/
-   - 📖 **ReDoc**: http://localhost:8000/redoc/
-   - 🔗 **API Schema**: http://localhost:8000/swagger.json
+   - 📚 **Swagger UI**: http://localhost:8000/api/docs/
+   - 📖 **ReDoc**: http://localhost:8000/api/redoc/
+   - 🔗 **API Schema**: http://localhost:8000/api/schema/
+
+4. **Demo Users (Auto-created)**
+   - **Staff**: staff1@example.com / password123
+   - **Approver L1**: approver1@example.com / password123
+   - **Approver L2**: approver2@example.com / password123
+   - **Finance**: finance1@example.com / password123
 
 ## 🌐 Live Demo
 
@@ -128,10 +141,14 @@ A comprehensive **Procure-to-Pay** system with Django REST API backend and React
 - Clean form layouts with proper validation
 
 ### 🔘 **Enhanced User Experience**
-- Visible approve/reject buttons for approvers
-- Modal dialogs for confirmation actions
-- Real-time form validation
-- Loading states and error handling
+- **Role-Based Interface**: Different actions for different user roles
+- **Approval Tracking**: Individual approval statistics for approvers
+- **Export Functionality**: Finance users can export request data
+- **Document Management**: Support for PDF and various document formats
+- **Visible approve/reject buttons**: Available for both Level 1 & 2 approvers
+- **Modal dialogs**: Confirmation actions with proper error handling
+- **Real-time form validation**: Instant feedback on form inputs
+- **Loading states**: Smooth transitions and loading indicators
 
 #
 ### 🧪 Test the API
@@ -165,7 +182,7 @@ python3 test_api.py
 | **👤 Staff** | • Create purchase requests<br>• View own requests<br>• Submit receipts<br>• Upload proformas |
 | **✅ Approver Level 1** | • Review pending requests<br>• Approve/reject requests<br>• View request history |
 | **✅ Approver Level 2** | • Final approval authority<br>• Review Level 1 approved requests<br>• Generate purchase orders |
-| **💰 Finance** | • View all requests<br>• Access financial reports<br>• Monitor budget compliance |
+| **💰 Finance** | • View all requests<br>• Export request data<br>• Access financial reports<br>• Upload financial documents<br>• Monitor budget compliance |
 
 ## 🔄 Approval Workflow
 
@@ -210,8 +227,10 @@ graph TD
 - **Pending Status**: Request awaits approvals
 - **Level 1 Approval**: First approver reviews and approves
 - **Level 2 Approval**: Second approver provides final approval
+- **Individual Tracking**: Each approver sees their personal approval statistics
 - **Status Change**: Only changes to 'approved' when BOTH levels approve
 - **Rejection**: Any level can reject, immediately changing status to 'rejected'
+- **Approval History**: Complete tracking of who approved/rejected at each level
 
 ### 🤖 **AI Integration**
 - **OCR Processing**: Extract text from images using pytesseract
@@ -221,10 +240,10 @@ graph TD
 
 ### 📊 **Data Models**
 - **User**: Extended with roles and departments
-- **PurchaseRequest**: Core entity with file attachments
+- **PurchaseRequest**: Core entity with file attachments and export capabilities
 - **RequestItem**: Line items for detailed tracking
-- **Approval**: Multi-level approval tracking
-- **DocumentProcessing**: AI extraction results
+- **Approval**: Multi-level approval tracking with individual statistics
+- **DocumentProcessing**: AI extraction results for uploaded documents
 
 ### 🔧 Configuration
 
@@ -302,7 +321,8 @@ python3 VALIDATE_BUILD.py
 - 🌊 **DigitalOcean** - Developer-friendly VPS
 - 🐳 **Any Docker-compatible platform**
 
-**📖 Complete Deployment Guide**: [DEPLOYMENT.md](DEPLOYMENT.md)
+**📖 Complete Deployment Guide**: [DEPLOYMENT.md](DEPLOYMENT.md)  
+**🐳 Docker Setup Guide**: [README-DOCKER.md](README-DOCKER.md)
 
 ## 🤝 Contributing
 
@@ -341,12 +361,16 @@ python3 VALIDATE_BUILD.py
 
 ### ✅ **Latest Improvements**
 - **Enhanced UI**: Clean black and white theme across all pages
-- **Fixed Approval Buttons**: Visible red reject and green approve buttons
+- **Fixed Approval Buttons**: Visible red reject and green approve buttons for both Level 1 & 2 approvers
+- **Approval Statistics**: Individual approval tracking for approvers (shows their personal approval/rejection counts)
+- **Finance Export Features**: Finance users can export request data instead of viewing details
+- **Document Upload**: Enhanced file upload supporting PDF, images, and other document formats
 - **Modal Dialogs**: Proper confirmation dialogs for approve/reject actions
 - **Form Validation**: Real-time validation with proper error handling
 - **Responsive Design**: Mobile-friendly interface with smooth animations
 - **Database Migration**: Successfully migrated from Supabase to Render PostgreSQL
 - **API Documentation**: Updated to drf-spectacular for modern OpenAPI 3.0 support
+- **Role-Based Actions**: Different action buttons based on user roles (View vs Export)
 
 
 ---

@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { Eye, Edit, Trash2 } from 'lucide-react';
+import { Eye, Edit, Trash2, Download } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { PurchaseRequest } from '@/types';
 import { formatDate, formatStatus } from '@/utils/formatters';
@@ -114,12 +114,33 @@ export default function RequestList({ requests, loading, onDelete }: RequestList
               <TableCell className="text-black">{formatDate(request.created_at)}</TableCell>
               <TableCell className="text-right">
                 <div className="flex justify-end gap-2">
-                  <Button asChild variant="ghost" size="sm" className="hover:bg-gray-100">
-                    <Link to={`/requests/${request.id}`}>
-                      <Eye className="mr-2 h-4 w-4" />
-                      View
-                    </Link>
-                  </Button>
+                  {user?.role === 'finance' ? (
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="hover:bg-gray-100"
+                      onClick={() => {
+                        const data = `Request: ${request.title}\nAmount: ${formatCurrency(request.amount)}\nStatus: ${request.status}\nCreated By: ${request.created_by_name}\nDate: ${formatDate(request.created_at)}`;
+                        const blob = new Blob([data], { type: 'text/plain' });
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = `request-${request.id}-export.txt`;
+                        a.click();
+                        URL.revokeObjectURL(url);
+                      }}
+                    >
+                      <Download className="mr-2 h-4 w-4" />
+                      Export
+                    </Button>
+                  ) : (
+                    <Button asChild variant="ghost" size="sm" className="hover:bg-gray-100">
+                      <Link to={`/requests/${request.id}`}>
+                        <Eye className="mr-2 h-4 w-4" />
+                        View
+                      </Link>
+                    </Button>
+                  )}
                   {user?.role === 'staff' && request.status === 'pending' && request.created_by === user.id && (
                     <>
                       <Button asChild size="sm" className="bg-blue-600 text-white hover:bg-blue-700">

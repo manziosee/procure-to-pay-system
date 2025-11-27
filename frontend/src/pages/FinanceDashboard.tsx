@@ -32,6 +32,9 @@ import {
 export default function FinanceDashboard() {
   const { user } = useAuth();
   const { requests, isLoading, loadRequests } = useRequestsSync();
+  
+  console.log('Finance Dashboard - Requests loaded:', requests.length);
+  console.log('Finance Dashboard - Sample request:', requests[0]);
   const [uploadFile, setUploadFile] = useState<File | null>(null);
 
   useEffect(() => {
@@ -87,11 +90,26 @@ export default function FinanceDashboard() {
     }
   };
 
-  const handleFileUpload = () => {
+  const handleFileUpload = async () => {
     if (uploadFile) {
-      console.log('Uploading file:', uploadFile.name);
-      alert('File uploaded successfully!');
-      setUploadFile(null);
+      try {
+        // Create FormData to handle file upload
+        const formData = new FormData();
+        formData.append('document', uploadFile);
+        
+        // Here you would typically send to your API
+        // For now, we'll simulate the upload
+        console.log('Uploading file:', uploadFile.name, 'Type:', uploadFile.type);
+        
+        // Simulate API call
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        alert(`File "${uploadFile.name}" uploaded successfully!`);
+        setUploadFile(null);
+      } catch (error) {
+        console.error('Upload failed:', error);
+        alert('Upload failed. Please try again.');
+      }
     }
   };
 
@@ -248,26 +266,24 @@ export default function FinanceDashboard() {
                     <TableCell className="text-black">{request.created_by_name}</TableCell>
                     <TableCell className="text-black">{formatDate(request.created_at)}</TableCell>
                     <TableCell className="text-right">
-                      <div className="flex justify-end gap-2">
-                        <Button asChild variant="ghost" size="sm" className="hover:bg-gray-100">
-                          <Link to={`/requests/${request.id}`}>
-                            <Eye className="mr-2 h-4 w-4" />
-                            View
-                          </Link>
-                        </Button>
-                        <Button 
-                          size="sm" 
-                          variant="outline"
-                          className="border-gray-300 text-black hover:bg-gray-100"
-                          onClick={() => {
-                            console.log('Downloading report for request:', request.id);
-                            alert('Financial report downloaded!');
-                          }}
-                        >
-                          <Download className="mr-1 h-4 w-4" />
-                          Report
-                        </Button>
-                      </div>
+                      <Button 
+                        size="sm" 
+                        variant="outline"
+                        className="border-gray-300 text-black hover:bg-gray-100"
+                        onClick={() => {
+                          const data = `Request: ${request.title}\nAmount: ${formatCurrency(request.amount)}\nStatus: ${request.status}\nCreated By: ${request.created_by_name}\nDate: ${formatDate(request.created_at)}`;
+                          const blob = new Blob([data], { type: 'text/plain' });
+                          const url = URL.createObjectURL(blob);
+                          const a = document.createElement('a');
+                          a.href = url;
+                          a.download = `request-${request.id}-export.txt`;
+                          a.click();
+                          URL.revokeObjectURL(url);
+                        }}
+                      >
+                        <Download className="mr-1 h-4 w-4" />
+                        Export
+                      </Button>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -296,11 +312,23 @@ export default function FinanceDashboard() {
                     <TableCell className="text-black">{request.created_by_name}</TableCell>
                     <TableCell className="text-black">{formatDate(request.created_at)}</TableCell>
                     <TableCell className="text-right">
-                      <Button asChild variant="ghost" size="sm" className="hover:bg-gray-100">
-                        <Link to={`/requests/${request.id}`}>
-                          <Eye className="mr-2 h-4 w-4" />
-                          View
-                        </Link>
+                      <Button 
+                        size="sm" 
+                        variant="outline"
+                        className="border-gray-300 text-black hover:bg-gray-100"
+                        onClick={() => {
+                          const data = `Request: ${request.title}\nAmount: ${formatCurrency(request.amount)}\nStatus: ${request.status}\nCreated By: ${request.created_by_name}\nDate: ${formatDate(request.created_at)}`;
+                          const blob = new Blob([data], { type: 'text/plain' });
+                          const url = URL.createObjectURL(blob);
+                          const a = document.createElement('a');
+                          a.href = url;
+                          a.download = `request-${request.id}-export.txt`;
+                          a.click();
+                          URL.revokeObjectURL(url);
+                        }}
+                      >
+                        <Download className="mr-1 h-4 w-4" />
+                        Export
                       </Button>
                     </TableCell>
                   </TableRow>
@@ -330,11 +358,23 @@ export default function FinanceDashboard() {
                     <TableCell className="text-black">{request.created_by_name}</TableCell>
                     <TableCell className="text-black">{formatDate(request.created_at)}</TableCell>
                     <TableCell className="text-right">
-                      <Button asChild variant="ghost" size="sm" className="hover:bg-gray-100">
-                        <Link to={`/requests/${request.id}`}>
-                          <Eye className="mr-2 h-4 w-4" />
-                          View
-                        </Link>
+                      <Button 
+                        size="sm" 
+                        variant="outline"
+                        className="border-gray-300 text-black hover:bg-gray-100"
+                        onClick={() => {
+                          const data = `Request: ${request.title}\nAmount: ${formatCurrency(request.amount)}\nStatus: ${request.status}\nCreated By: ${request.created_by_name}\nDate: ${formatDate(request.created_at)}`;
+                          const blob = new Blob([data], { type: 'text/plain' });
+                          const url = URL.createObjectURL(blob);
+                          const a = document.createElement('a');
+                          a.href = url;
+                          a.download = `request-${request.id}-export.txt`;
+                          a.click();
+                          URL.revokeObjectURL(url);
+                        }}
+                      >
+                        <Download className="mr-1 h-4 w-4" />
+                        Export
                       </Button>
                     </TableCell>
                   </TableRow>

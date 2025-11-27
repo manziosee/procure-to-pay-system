@@ -68,6 +68,9 @@ export default function Dashboard() {
     let filtered = requests;
     if (user?.role === 'staff') {
       filtered = requests.filter(req => req.created_by === user.id);
+    } else if (user?.role?.includes('approver')) {
+      // For approvers, show all requests (they can see pending, approved, rejected)
+      filtered = requests;
     }
     setFilteredRequests(filtered);
   }, [requests, user]);
@@ -75,6 +78,28 @@ export default function Dashboard() {
   const getStats = (): Stats => {
     if (!filteredRequests) return { pending: 0, approved: 0, rejected: 0 };
     
+    // For approvers, count based on their individual approval actions
+    if (user?.role?.includes('approver')) {
+      return filteredRequests.reduce((acc: Stats, req) => {
+        const userApproval = req.approvals?.find(approval => 
+          approval.approver === user.id || approval.approver_id === user.id
+        );
+        
+        if (userApproval) {
+          if (userApproval.approved === true) {
+            acc.approved += 1;
+          } else if (userApproval.approved === false) {
+            acc.rejected += 1;
+          }
+        } else if (req.status === 'pending') {
+          acc.pending += 1;
+        }
+        
+        return acc;
+      }, { pending: 0, approved: 0, rejected: 0 });
+    }
+    
+    // For staff and finance, use request status
     return filteredRequests.reduce((acc: Stats, req) => {
       acc[req.status] = (acc[req.status] || 0) + 1;
       return acc;

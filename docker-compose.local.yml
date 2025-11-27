@@ -1,10 +1,12 @@
 version: '3.8'
 
-# Production setup with optimized configurations
+# Development setup using Render PostgreSQL (same as production)
+# This matches your existing setup since you've always used Render PostgreSQL
+
 services:
   redis:
     image: redis:7-alpine
-    container_name: procure2pay_redis_prod
+    container_name: procure2pay_redis
     ports:
       - "6379:6379"
     healthcheck:
@@ -18,18 +20,19 @@ services:
     build: 
       context: ./backend
       dockerfile: Dockerfile
-    container_name: procure2pay_backend_prod
+    container_name: procure2pay_backend
     ports:
       - "8000:8000"
     environment:
-      - DEBUG=False
+      - DEBUG=True
       - DATABASE_URL=postgresql://procure_to_pay_db_6wh2_user:xejK62m3TQoxXwRlRGgFWSsVfk51EXKX@dpg-d4itlm6r433s73a9n490-a.oregon-postgres.render.com/procure_to_pay_db_6wh2
       - REDIS_URL=redis://redis:6379
-      - SECRET_KEY=${SECRET_KEY}
-      - ALLOWED_HOSTS=${ALLOWED_HOSTS}
-      - CORS_ALLOWED_ORIGINS=${CORS_ALLOWED_ORIGINS}
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - SECRET_KEY=django-insecure-dev-key-change-in-production
+      - ALLOWED_HOSTS=localhost,127.0.0.1,backend,0.0.0.0
+      - CORS_ALLOWED_ORIGINS=http://localhost:3000,http://127.0.0.1:3000,http://frontend:3000
+      - OPENAI_API_KEY=your-openai-api-key-here
     volumes:
+      - ./backend:/app
       - media_files:/app/media
       - static_files:/app/staticfiles
     depends_on:
@@ -46,20 +49,30 @@ services:
       sh -c "python manage.py collectstatic --noinput &&
              python manage.py migrate &&
              python create_demo_users.py &&
-             gunicorn procure_to_pay.wsgi:application --bind 0.0.0.0:8000"
+             python manage.py runserver 0.0.0.0:8000"
 
   frontend:
     build: 
       context: ./frontend
-      dockerfile: Dockerfile
-    container_name: procure2pay_frontend_prod
+      dockerfile: Dockerfile.dev
+    container_name: procure2pay_frontend
     ports:
-      - "80:80"
+      - "3000:3000"
     environment:
-      - VITE_API_URL=${VITE_API_URL}
+      - VITE_API_URL=http://localhost:8000
+      - CHOKIDAR_USEPOLLING=true
+      - WATCHPACK_POLLING=true
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
     depends_on:
       backend:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
     restart: unless-stopped
 
 volumes:
@@ -70,4 +83,4 @@ volumes:
 
 networks:
   default:
-    name: procure2pay_network_prod
+    name: procure2pay_network
