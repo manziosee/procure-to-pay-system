@@ -46,8 +46,9 @@ class PurchaseRequestSerializer(serializers.ModelSerializer):
 
 class ApprovalSerializer(serializers.ModelSerializer):
     approver_name = serializers.CharField(source='approver.get_full_name', read_only=True)
+    approver_role = serializers.CharField(source='approver.role', read_only=True)
     
     class Meta:
         model = Approval
-        fields = ['id', 'approver', 'approver_name', 'approved', 'comments', 'created_at']
+        fields = ['id', 'approver', 'approver_name', 'approver_role', 'approved', 'comments', 'created_at']
         read_only_fields = ['approver']

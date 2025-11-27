@@ -29,7 +29,9 @@ export interface PurchaseRequest {
 export interface Approval {
   id: number;
   approver: number;
+  approver_id?: number;
   approver_name: string;
+  approver_role?: string;
   approved: boolean | null;
   comments: string;
   created_at: string;

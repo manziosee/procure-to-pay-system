@@ -83,8 +83,8 @@ export default function Approvals() {
   }, [loadRequests]);
 
   useEffect(() => {
-    // Filter requests for approvers (pending requests)
-    setRequests(allRequests.filter(req => req.status === 'pending'));
+    // Show all requests for approvers to see their complete history
+    setRequests(allRequests);
   }, [allRequests]);
 
   // Check if user is an approver
@@ -99,8 +99,34 @@ export default function Approvals() {
     );
   }
 
-  const pendingRequests = requests.filter(req => req.status === 'pending');
-  const reviewedRequests = requests.filter(req => req.status !== 'pending');
+  // Filter requests based on approver's individual actions
+  const pendingRequests = requests.filter(req => {
+    const userApproval = req.approvals?.find(approval => 
+      approval.approver === user?.id || approval.approver_id === user?.id
+    );
+    return !userApproval && req.status === 'pending';
+  });
+  
+  const reviewedRequests = requests.filter(req => {
+    const userApproval = req.approvals?.find(approval => 
+      approval.approver === user?.id || approval.approver_id === user?.id
+    );
+    return userApproval !== undefined;
+  });
+  
+  const approvedByUser = reviewedRequests.filter(req => {
+    const userApproval = req.approvals?.find(approval => 
+      approval.approver === user?.id || approval.approver_id === user?.id
+    );
+    return userApproval?.approved === true;
+  });
+  
+  const rejectedByUser = reviewedRequests.filter(req => {
+    const userApproval = req.approvals?.find(approval => 
+      approval.approver === user?.id || approval.approver_id === user?.id
+    );
+    return userApproval?.approved === false;
+  });
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -345,7 +371,7 @@ export default function Approvals() {
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold text-green-900">
-              {reviewedRequests.filter(r => r.status === 'approved').length}
+              {approvedByUser.length}
             </div>
             <p className="text-xs text-green-700 font-medium">Successfully approved</p>
           </CardContent>
@@ -360,7 +386,7 @@ export default function Approvals() {
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold text-red-900">
-              {reviewedRequests.filter(r => r.status === 'rejected').length}
+              {rejectedByUser.length}
             </div>
             <p className="text-xs text-red-700 font-medium">Declined requests</p>
           </CardContent>

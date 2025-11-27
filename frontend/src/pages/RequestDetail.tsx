@@ -82,15 +82,16 @@ export default function RequestDetail() {
     if (!id) return;
     try {
       const { purchaseRequests } = await import('@/services/api');
-      await purchaseRequests.approve(id, comments);
+      const response = await purchaseRequests.approve(id, comments);
       alert('Request approved successfully!');
       setApproveDialog(false);
       setComments('');
       // Reload request data to show updated approvals
       await loadRequest();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error approving request:', error);
-      alert('Failed to approve request');
+      const errorMessage = error.response?.data?.error || error.response?.data?.message || 'Failed to approve request';
+      alert(errorMessage);
     }
   };
 
@@ -98,15 +99,16 @@ export default function RequestDetail() {
     if (!id) return;
     try {
       const { purchaseRequests } = await import('@/services/api');
-      await purchaseRequests.reject(id, reason);
+      const response = await purchaseRequests.reject(id, reason);
       alert('Request rejected successfully!');
       setRejectDialog(false);
       setComments('');
       // Reload request data to show updated approvals
       await loadRequest();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error rejecting request:', error);
-      alert('Failed to reject request');
+      const errorMessage = error.response?.data?.error || error.response?.data?.message || 'Failed to reject request';
+      alert(errorMessage);
     }
   };
 
@@ -235,20 +237,22 @@ export default function RequestDetail() {
   
   // Check if current user has already acted on this request
   const userHasActed = request.approvals?.some((a: Approval) => 
-    a.approver?.id === user?.id || a.approver_id === user?.id
+    (a.approver?.id === user?.id?.toString() || a.approver_id === user?.id?.toString())
   );
   
   const canApprove = (() => {
     if (request.status !== 'pending') return false;
-    if (hasLevel1Rejection) return false; // If Level 1 rejected, no one can approve
     if (userHasActed) return false; // User has already acted
     
     if (user?.role === 'approver_level_1') {
-      return true; // Level 1 can always approve pending requests (if they haven't acted)
+      return !hasLevel1Rejection; // Level 1 can approve if not already rejected
     }
     
     if (user?.role === 'approver_level_2') {
-      return hasLevel1Approval; // Level 2 can only approve after Level 1 approval
+      // Level 2 can approve if Level 1 hasn't rejected AND either:
+      // 1. Level 1 has approved, OR
+      // 2. No Level 1 action yet (both can work in parallel)
+      return !hasLevel1Rejection;
     }
     
     return false;

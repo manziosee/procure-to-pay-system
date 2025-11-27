@@ -40,7 +40,7 @@ HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
 EXPOSE 8000
 
 # Set default Django settings
-ENV DJANGO_SETTINGS_MODULE=procure_to_pay.settings.local
+ENV DJANGO_SETTINGS_MODULE=procure_to_pay.settings
 
 # Security environment variables
 ENV PYTHONHASHSEED=random

@@ -29,6 +29,9 @@ export const useRequestsSync = () => {
       const response = await purchaseRequests.getAll();
       const allRequests = response.data.results || response.data || [];
       
+      console.log('API Response:', response.data);
+      console.log('Loaded requests:', allRequests);
+      
       // Update global state
       globalRequests = allRequests;
       
@@ -37,6 +40,7 @@ export const useRequestsSync = () => {
       
     } catch (error) {
       console.error('Error loading requests:', error);
+      console.error('Error details:', error.response?.data);
     } finally {
       setIsLoading(false);
     }

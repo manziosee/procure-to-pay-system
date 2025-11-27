@@ -36,22 +36,23 @@ class PurchaseRequestViewSet(ModelViewSet):
         ).prefetch_related(
             'approvals__approver',
             'items'
-        ).only(
-            'id', 'title', 'description', 'amount', 'status', 
-            'created_at', 'updated_at', 'created_by__id', 
-            'created_by__email', 'created_by__first_name', 'created_by__last_name'
         )
         
-        # Add caching for frequently accessed data
-        from django.core.cache import cache
-        cache_key = f'requests_{user.role}_{user.id}'
+        # Only use .only() for list views, not for detail views
+        if self.action == 'list':
+            base_queryset = base_queryset.only(
+                'id', 'title', 'description', 'amount', 'status', 
+                'created_at', 'updated_at', 'created_by__id', 
+                'created_by__email', 'created_by__first_name', 'created_by__last_name'
+            )
         
         if user.role == 'staff':
             return base_queryset.filter(created_by=user)
         elif user.role in ['approver_level_1', 'approver_level_2']:
-            return base_queryset.filter(status='pending')
+            # Return all requests for approvers to see their approval history
+            return base_queryset.all()
         elif user.role == 'finance':
-            return base_queryset.all()[:100]  # Limit for performance
+            return base_queryset.all()
         return PurchaseRequest.objects.none()
     
     def perform_create(self, serializer):
@@ -102,7 +103,7 @@ class PurchaseRequestViewSet(ModelViewSet):
         )
         
         if not created:
-            return Response({'error': 'Already reviewed'}, 
+            return Response({'error': 'You have already reviewed this request'}, 
                           status=status.HTTP_400_BAD_REQUEST)
         
         if not approved:
