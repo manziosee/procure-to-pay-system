@@ -1,7 +1,9 @@
 version: '3.8'
 
+# Production setup using external PostgreSQL (Render)
+# For local development with PostgreSQL, use: docker-compose -f docker-compose.local.yml up --build
+
 services:
-  # Using Render PostgreSQL - no local db needed
 
   redis:
     image: redis:7-alpine
