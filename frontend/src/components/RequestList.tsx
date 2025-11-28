@@ -115,24 +115,89 @@ export default function RequestList({ requests, loading, onDelete }: RequestList
               <TableCell className="text-right">
                 <div className="flex justify-end gap-2">
                   {user?.role === 'finance' ? (
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      className="hover:bg-gray-100"
-                      onClick={() => {
-                        const data = `Request: ${request.title}\nAmount: ${formatCurrency(request.amount)}\nStatus: ${request.status}\nCreated By: ${request.created_by_name}\nDate: ${formatDate(request.created_at)}`;
-                        const blob = new Blob([data], { type: 'text/plain' });
-                        const url = URL.createObjectURL(blob);
-                        const a = document.createElement('a');
-                        a.href = url;
-                        a.download = `request-${request.id}-export.txt`;
-                        a.click();
-                        URL.revokeObjectURL(url);
-                      }}
-                    >
-                      <Download className="mr-2 h-4 w-4" />
-                      Export
-                    </Button>
+                    <div className="flex gap-1">
+                      {request.proforma && (
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="hover:bg-gray-100"
+                          onClick={async () => {
+                            try {
+                              const { purchaseRequests } = await import('@/services/api');
+                              const response = await purchaseRequests.downloadDocument(request.id.toString(), 'proforma');
+                              const blob = new Blob([response.data]);
+                              const url = URL.createObjectURL(blob);
+                              const link = document.createElement('a');
+                              link.href = url;
+                              link.download = `proforma-${request.id}.pdf`;
+                              link.click();
+                              URL.revokeObjectURL(url);
+                            } catch (error) {
+                              console.error('Download failed:', error);
+                              alert('Failed to download proforma');
+                            }
+                          }}
+                        >
+                          <Download className="mr-1 h-3 w-3" />
+                          Proforma
+                        </Button>
+                      )}
+                      {request.purchase_order && (
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="hover:bg-gray-100"
+                          onClick={async () => {
+                            try {
+                              const { purchaseRequests } = await import('@/services/api');
+                              const response = await purchaseRequests.downloadDocument(request.id.toString(), 'purchase_order');
+                              const blob = new Blob([response.data]);
+                              const url = URL.createObjectURL(blob);
+                              const link = document.createElement('a');
+                              link.href = url;
+                              link.download = `purchase-order-${request.id}.pdf`;
+                              link.click();
+                              URL.revokeObjectURL(url);
+                            } catch (error) {
+                              console.error('Download failed:', error);
+                              alert('Failed to download purchase order');
+                            }
+                          }}
+                        >
+                          <Download className="mr-1 h-3 w-3" />
+                          PO
+                        </Button>
+                      )}
+                      {request.receipt && (
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="hover:bg-gray-100"
+                          onClick={async () => {
+                            try {
+                              const { purchaseRequests } = await import('@/services/api');
+                              const response = await purchaseRequests.downloadDocument(request.id.toString(), 'receipt');
+                              const blob = new Blob([response.data]);
+                              const url = URL.createObjectURL(blob);
+                              const link = document.createElement('a');
+                              link.href = url;
+                              link.download = `receipt-${request.id}.pdf`;
+                              link.click();
+                              URL.revokeObjectURL(url);
+                            } catch (error) {
+                              console.error('Download failed:', error);
+                              alert('Failed to download receipt');
+                            }
+                          }}
+                        >
+                          <Download className="mr-1 h-3 w-3" />
+                          Receipt
+                        </Button>
+                      )}
+                      {!request.proforma && !request.purchase_order && !request.receipt && (
+                        <span className="text-xs text-gray-500 px-2 py-1">No documents</span>
+                      )}
+                    </div>
                   ) : (
                     <Button asChild variant="ghost" size="sm" className="hover:bg-gray-100">
                       <Link to={`/requests/${request.id}`}>

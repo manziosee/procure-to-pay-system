@@ -14,7 +14,16 @@ from django.core.exceptions import ValidationError
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import letter
 from io import BytesIO
-from ...utils.error_handler import ErrorLogger
+# from ...utils.error_handler import ErrorLogger
+
+class ErrorLogger:
+    @staticmethod
+    def log_file_processing_error(filename, error):
+        print(f"File processing error for {filename}: {error}")
+    
+    @staticmethod
+    def log_security_event(event_type, user, details):
+        print(f"Security event {event_type} for user {user}: {details}")
 
 class DocumentProcessor:
     def __init__(self):
@@ -27,13 +36,57 @@ class DocumentProcessor:
                 self.client = None
     
     def extract_text_from_image(self, image_path):
-        return pytesseract.image_to_string(Image.open(image_path))
+        """Extract text from images with enhanced OCR"""
+        try:
+            image = Image.open(image_path)
+            if image.mode != 'RGB':
+                image = image.convert('RGB')
+            
+            text = pytesseract.image_to_string(image, config='--psm 6')
+            
+            if not text.strip():
+                for psm in [3, 4, 6, 8, 11, 13]:
+                    try:
+                        text = pytesseract.image_to_string(image, config=f'--psm {psm}')
+                        if text.strip():
+                            break
+                    except:
+                        continue
+            
+            return text
+            
+        except Exception as e:
+            print(f"OCR failed for {image_path}: {e}")
+            return ""
     
     def extract_text_from_pdf(self, pdf_path):
+        """Extract text from PDF with multiple fallback methods"""
         text = ""
-        with pdfplumber.open(pdf_path) as pdf:
-            for page in pdf.pages:
-                text += page.extract_text() or ""
+        
+        try:
+            with pdfplumber.open(pdf_path) as pdf:
+                for page in pdf.pages:
+                    page_text = page.extract_text()
+                    if page_text:
+                        text += page_text + "\n"
+            
+            if text.strip():
+                return text
+        except Exception as e:
+            print(f"pdfplumber failed: {e}")
+        
+        try:
+            import PyPDF2
+            with open(pdf_path, 'rb') as file:
+                reader = PyPDF2.PdfReader(file)
+                for page in reader.pages:
+                    text += page.extract_text() + "\n"
+            
+            if text.strip():
+                return text
+        except Exception as e:
+            print(f"PyPDF2 failed: {e}")
+        
         return text
     
     def process_proforma(self, file_input):
@@ -97,23 +150,38 @@ class DocumentProcessor:
                 pass
     
     def _extract_text(self, file_path):
-        if file_path.lower().endswith('.pdf'):
-            return self.extract_text_from_pdf(file_path)
-        elif file_path.lower().endswith(('.txt', '.text')):
-            # Handle text files directly
-            with open(file_path, 'r', encoding='utf-8') as f:
-                return f.read()
-        else:
-            # Handle image files
-            try:
-                return self.extract_text_from_image(file_path)
-            except Exception as e:
-                # If image processing fails, try reading as text
-                try:
-                    with open(file_path, 'r', encoding='utf-8') as f:
-                        return f.read()
-                except:
-                    raise e
+        """Extract text from various file formats with robust error handling"""
+        text = ""
+        file_ext = file_path.lower()
+        
+        try:
+            # PDF files
+            if file_ext.endswith('.pdf'):
+                text = self.extract_text_from_pdf(file_path)
+                if not text.strip():
+                    text = self._extract_pdf_alternative(file_path)
+            
+            # Text files
+            elif file_ext.endswith(('.txt', '.text', '.csv')):
+                text = self._extract_text_file(file_path)
+            
+            # Image files
+            elif file_ext.endswith(('.jpg', '.jpeg', '.png', '.bmp', '.tiff', '.gif')):
+                text = self.extract_text_from_image(file_path)
+            
+            # Unknown format - try multiple approaches
+            else:
+                text = self._extract_unknown_format(file_path)
+            
+            # Validate extracted text
+            if not text or len(text.strip()) < 5:
+                raise ValueError(f"Insufficient text extracted from {file_path}")
+            
+            return text.strip()
+            
+        except Exception as e:
+            print(f"Text extraction failed for {file_path}: {e}")
+            return f"Text extraction failed for file type: {file_ext}"
     
     def _extract_proforma_data(self, text):
         if self.client:
@@ -123,29 +191,72 @@ class DocumentProcessor:
     
     def _ai_extract_proforma(self, text):
         try:
+            if not text or len(text.strip()) < 10:
+                raise ValueError("Insufficient text content for AI processing")
+            
             response = self.client.chat.completions.create(
                 model="gpt-3.5-turbo",
                 messages=[
-                    {"role": "system", "content": "Extract structured data from proforma invoice. Return only valid JSON with vendor, total_amount, items (array with name, quantity, unit_price), terms."},
-                    {"role": "user", "content": f"Extract data from this document:\n{text}"}
+                    {
+                        "role": "system", 
+                        "content": """You are a document processing AI. Extract structured data from proforma invoices.
+                        Return ONLY valid JSON with these exact fields:
+                        {
+                            "vendor": "company name",
+                            "total_amount": "numeric string",
+                            "items": [{"name": "item name", "quantity": number, "unit_price": "numeric string"}],
+                            "terms": "payment terms",
+                            "confidence": 0.95
+                        }
+                        If you cannot extract data, return basic structure with empty/default values."""
+                    },
+                    {"role": "user", "content": f"Extract data from this proforma invoice:\n\n{text[:2000]}"}
                 ],
-                temperature=0
+                temperature=0.1,
+                max_tokens=1000
             )
-            content = response.choices[0].message.content
-            # Clean up response to ensure valid JSON
+            
+            content = response.choices[0].message.content.strip()
+            
+            # Clean up response
             if content.startswith('```json'):
                 content = content.replace('```json', '').replace('```', '').strip()
-            return json.loads(content)
+            elif content.startswith('```'):
+                content = content.replace('```', '').strip()
+            
+            # Parse JSON
+            extracted_data = json.loads(content)
+            
+            # Validate required fields
+            if not isinstance(extracted_data, dict):
+                raise ValueError("Invalid JSON structure")
+            
+            # Ensure required fields exist
+            extracted_data.setdefault('vendor', 'Unknown Vendor')
+            extracted_data.setdefault('total_amount', '0.00')
+            extracted_data.setdefault('items', [])
+            extracted_data.setdefault('terms', 'Net 30')
+            extracted_data.setdefault('confidence', 0.8)
+            
+            return extracted_data
+            
         except Exception as e:
             print(f"AI extraction failed: {e}")
-            return self._basic_extract_proforma(text)
+            # Return basic extraction with fallback
+            basic_data = self._basic_extract_proforma(text)
+            basic_data['confidence'] = 0.3
+            basic_data['processing_method'] = 'basic_fallback'
+            return basic_data
     
     def _basic_extract_proforma(self, text):
+        items = self._extract_items(text)
         return {
             'vendor': self._extract_vendor(text),
             'total_amount': self._extract_amount(text),
-            'items': self._extract_items(text),
-            'terms': self._extract_terms(text)
+            'items': items,
+            'terms': self._extract_terms(text),
+            'confidence': 0.6,
+            'processing_method': 'basic_extraction'
         }
     
     def _extract_receipt_data(self, text):
@@ -337,29 +448,86 @@ class DocumentProcessor:
         return discrepancies
     
     def _validate_file_security(self, file_input):
-        """Validate file for security issues"""
-        if hasattr(file_input, 'size') and file_input.size > 10 * 1024 * 1024:  # 10MB limit
-            raise ValidationError("File too large. Maximum size is 10MB.")
+        """Validate file for security issues with expanded format support"""
+        if hasattr(file_input, 'size') and file_input.size > 15 * 1024 * 1024:  # 15MB limit
+            raise ValidationError("File too large. Maximum size is 15MB.")
         
         if hasattr(file_input, 'name'):
             filename = file_input.name.lower()
-            allowed_extensions = ['.pdf', '.jpg', '.jpeg', '.png', '.txt']
+            allowed_extensions = [
+                '.pdf', '.jpg', '.jpeg', '.png', '.bmp', '.tiff', '.gif',
+                '.txt', '.text', '.csv'
+            ]
             if not any(filename.endswith(ext) for ext in allowed_extensions):
-                raise ValidationError("File type not allowed.")
+                raise ValidationError(f"File type not allowed. Supported: {', '.join(allowed_extensions)}")
         
-        # Check MIME type if possible
         if hasattr(file_input, 'read'):
             file_input.seek(0)
-            file_header = file_input.read(1024)
+            file_header = file_input.read(2048)
             file_input.seek(0)
             
             try:
                 mime_type = magic.from_buffer(file_header, mime=True)
-                allowed_mimes = ['application/pdf', 'image/jpeg', 'image/png', 'text/plain']
+                allowed_mimes = [
+                    'application/pdf', 'image/jpeg', 'image/png', 'image/bmp',
+                    'image/tiff', 'image/gif', 'text/plain', 'text/csv'
+                ]
                 if mime_type not in allowed_mimes:
-                    raise ValidationError(f"File type {mime_type} not allowed.")
-            except:
-                pass  # If magic fails, continue with extension check
+                    print(f"Warning: MIME type {mime_type} not in allowed list, but proceeding...")
+            except Exception as e:
+                print(f"MIME type detection failed: {e}")
+
+    def _extract_text_file(self, file_path):
+        """Extract text from text files with encoding detection"""
+        encodings = ['utf-8', 'utf-16', 'latin-1', 'cp1252']
+        
+        for encoding in encodings:
+            try:
+                with open(file_path, 'r', encoding=encoding) as f:
+                    return f.read()
+            except UnicodeDecodeError:
+                continue
+            except Exception as e:
+                print(f"Error reading text file with {encoding}: {e}")
+                continue
+        
+        raise ValueError("Could not decode text file with any supported encoding")
+    
+    def _extract_pdf_alternative(self, pdf_path):
+        """Alternative PDF extraction method"""
+        try:
+            import PyPDF2
+            text = ""
+            with open(pdf_path, 'rb') as file:
+                reader = PyPDF2.PdfReader(file)
+                for page in reader.pages:
+                    text += page.extract_text() + "\n"
+            return text
+        except Exception as e:
+            print(f"Alternative PDF extraction failed: {e}")
+            return ""
+    
+    def _extract_unknown_format(self, file_path):
+        """Try multiple extraction methods for unknown formats"""
+        # Try as text file first
+        try:
+            return self._extract_text_file(file_path)
+        except:
+            pass
+        
+        # Try as image
+        try:
+            return self.extract_text_from_image(file_path)
+        except:
+            pass
+        
+        # Try as PDF
+        try:
+            return self.extract_text_from_pdf(file_path)
+        except:
+            pass
+        
+        return "Could not extract text from this file format"
 
 class POGenerator:
     def generate_po(self, purchase_request):

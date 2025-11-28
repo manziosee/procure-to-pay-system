@@ -354,15 +354,21 @@ export default function RequestDetail() {
                   variant="outline" 
                   size="sm" 
                   className="w-full"
-                  onClick={() => {
-                    // Create a temporary link to download the file with proper filename
-                    const link = document.createElement('a');
-                    link.href = request.proforma;
-                    link.download = `proforma-${request.id}.${request.proforma.split('.').pop() || 'pdf'}`;
-                    link.target = '_blank';
-                    document.body.appendChild(link);
-                    link.click();
-                    document.body.removeChild(link);
+                  onClick={async () => {
+                    try {
+                      const { purchaseRequests } = await import('@/services/api');
+                      const response = await purchaseRequests.downloadDocument(request.id.toString(), 'proforma');
+                      const blob = new Blob([response.data]);
+                      const url = URL.createObjectURL(blob);
+                      const link = document.createElement('a');
+                      link.href = url;
+                      link.download = `proforma-${request.id}.pdf`;
+                      link.click();
+                      URL.revokeObjectURL(url);
+                    } catch (error) {
+                      console.error('Download failed:', error);
+                      alert('Failed to download proforma');
+                    }
                   }}
                 >
                   <Download className="mr-2 h-4 w-4" />
@@ -375,17 +381,31 @@ export default function RequestDetail() {
 
             <div>
               <p className="text-sm font-medium mb-2">Purchase Order</p>
-              {request.purchase_order ? (
-                <Button variant="outline" size="sm" asChild className="w-full">
-                  <a href={request.purchase_order} target="_blank" rel="noopener noreferrer">
-                    <Download className="mr-2 h-4 w-4" />
-                    Download PO
-                  </a>
+              {request.purchase_order || request.status === 'approved' ? (
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="w-full"
+                  onClick={async () => {
+                    try {
+                      const { purchaseRequests } = await import('@/services/api');
+                      const response = await purchaseRequests.downloadDocument(request.id.toString(), 'purchase_order');
+                      const blob = new Blob([response.data]);
+                      const url = URL.createObjectURL(blob);
+                      const link = document.createElement('a');
+                      link.href = url;
+                      link.download = `purchase-order-${request.id}.pdf`;
+                      link.click();
+                      URL.revokeObjectURL(url);
+                    } catch (error) {
+                      console.error('Download failed:', error);
+                      alert('Failed to download purchase order');
+                    }
+                  }}
+                >
+                  <Download className="mr-2 h-4 w-4" />
+                  Download PO
                 </Button>
-              ) : request.status === 'approved' ? (
-                <div className="text-sm text-blue-600 bg-blue-50 p-2 rounded border">
-                  🔄 Purchase Order is being generated automatically...
-                </div>
               ) : (
                 <p className="text-sm text-muted-foreground">Not generated yet</p>
               )}
@@ -394,11 +414,29 @@ export default function RequestDetail() {
             <div>
               <p className="text-sm font-medium mb-2">Receipt</p>
               {request.receipt ? (
-                <Button variant="outline" size="sm" asChild className="w-full">
-                  <a href={request.receipt} target="_blank" rel="noopener noreferrer">
-                    <Download className="mr-2 h-4 w-4" />
-                    Download Receipt
-                  </a>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="w-full"
+                  onClick={async () => {
+                    try {
+                      const { purchaseRequests } = await import('@/services/api');
+                      const response = await purchaseRequests.downloadDocument(request.id.toString(), 'receipt');
+                      const blob = new Blob([response.data]);
+                      const url = URL.createObjectURL(blob);
+                      const link = document.createElement('a');
+                      link.href = url;
+                      link.download = `receipt-${request.id}.pdf`;
+                      link.click();
+                      URL.revokeObjectURL(url);
+                    } catch (error) {
+                      console.error('Download failed:', error);
+                      alert('Failed to download receipt');
+                    }
+                  }}
+                >
+                  <Download className="mr-2 h-4 w-4" />
+                  Download Receipt
                 </Button>
               ) : (
                 <p className="text-sm text-muted-foreground">No receipt submitted</p>

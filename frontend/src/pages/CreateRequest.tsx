@@ -349,17 +349,22 @@ export default function CreateRequest() {
                 
                 // Auto-fill form with extracted data
                 if (data.items && data.items.length > 0) {
-                  setItems(data.items);
-                  setValue('items', data.items);
+                  const formattedItems = data.items.map(item => ({
+                    name: item.name || '',
+                    description: item.description || item.name || '',
+                    quantity: parseInt(item.quantity) || 1,
+                    unit_price: parseFloat(item.unit_price) || 0
+                  }));
+                  setItems(formattedItems);
+                  setValue('items', formattedItems);
                 }
-                if (data.total_amount) {
+                if (data.total_amount && parseFloat(data.total_amount) > 0) {
                   setValue('amount', parseFloat(data.total_amount));
                 }
-                if (data.title) {
-                  setValue('title', data.title);
-                }
-                if (data.description) {
-                  setValue('description', data.description);
+                if (data.vendor_name || data.vendor) {
+                  const vendor = data.vendor_name || data.vendor;
+                  setValue('title', `Purchase from ${vendor}`);
+                  setValue('description', `Items from ${vendor} as per proforma invoice`);
                 }
               }}
               onFileUploaded={(file) => setValue('proforma', file)}

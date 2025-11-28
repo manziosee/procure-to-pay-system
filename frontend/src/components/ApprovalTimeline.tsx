@@ -62,7 +62,17 @@ export function ApprovalTimeline({ approvals, currentStatus }: ApprovalTimelineP
                 </div>
                 
                 {approval.comments && (
-                  <div className="mt-2 p-3 bg-muted rounded-md">
+                  <div className={`mt-2 p-3 rounded-md border ${
+                    approval.approved === true 
+                      ? 'bg-green-50 border-green-200 text-green-800' 
+                      : approval.approved === false 
+                      ? 'bg-red-50 border-red-200 text-red-800'
+                      : 'bg-gray-50 border-gray-200 text-gray-700'
+                  }`}>
+                    <p className="text-sm font-medium mb-1">
+                      {approval.approved === true ? '✅ Approval Reason:' : 
+                       approval.approved === false ? '❌ Rejection Reason:' : '💬 Comments:'}
+                    </p>
                     <p className="text-sm">{approval.comments}</p>
                   </div>
                 )}

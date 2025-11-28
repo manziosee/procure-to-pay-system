@@ -1,7 +1,22 @@
-# Environment files with secrets
+# Environment files with secrets - NEVER COMMIT THESE
+.env
 .env.local
 .env.production
+.env.render
+.env.docker
+*.env
+
+# API Keys and secrets - NEVER COMMIT THESE
+**/OPENAI_API_KEY*
+**/*api*key*
+**/*secret*
+**/SECRET_KEY*
+**/DATABASE_URL*
+
+# Logs
 *.log
+djangoproject.log
+server.log
 
 # Database
 db.sqlite3
@@ -34,3 +49,11 @@ Thumbs.db
 # Temporary files
 *.tmp
 temp/
+
+# Security - Files that may contain secrets
+postman_collection.json
+**/test_*api*.py
+**/comprehensive_*.py
+
+# Migration files (optional - uncomment if needed)
+# **/migrations/0*.py
