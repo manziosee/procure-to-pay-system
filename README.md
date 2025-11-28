@@ -128,12 +128,6 @@ A comprehensive **Procure-to-Pay** system with Django REST API backend and React
    - 📖 **ReDoc**: http://localhost:8000/api/redoc/
    - 🔗 **API Schema**: http://localhost:8000/api/schema/
 
-4. **Demo Users (Auto-created)**
-   - **Staff**: staff1@example.com / password123
-   - **Approver L1**: approver1@example.com / password123
-   - **Approver L2**: approver2@example.com / password123
-   - **Finance**: finance1@example.com / password123
-
 ## 🌐 Live Demo
 
 **Frontend Application**: https://procure-to-pay-system.vercel.app/  
