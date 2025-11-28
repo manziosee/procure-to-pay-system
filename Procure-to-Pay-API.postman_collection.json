@@ -1,0 +1,433 @@
+{
+	"info": {
+		"name": "Procure-to-Pay System API",
+		"description": "Complete API collection for Purchase Request & Approval System with multi-level approval workflow and AI-powered document processing",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "http://localhost:8000",
+			"type": "string"
+		},
+		{
+			"key": "accessToken",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "refreshToken",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "requestId",
+			"value": "",
+			"type": "string"
+		}
+	],
+	"auth": {
+		"type": "bearer",
+		"bearer": [
+			{
+				"key": "token",
+				"value": "{{accessToken}}",
+				"type": "string"
+			}
+		]
+	},
+	"item": [
+		{
+			"name": "🔐 Authentication",
+			"item": [
+				{
+					"name": "Register User",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"username\": \"testuser\",\n  \"email\": \"test@example.com\",\n  \"first_name\": \"Test\",\n  \"last_name\": \"User\",\n  \"role\": \"staff\",\n  \"department\": \"IT\",\n  \"password\": \"password123\",\n  \"password_confirm\": \"password123\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/register/",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "auth", "register", ""]
+						}
+					}
+				},
+				{
+					"name": "Login",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    const response = pm.response.json();",
+									"    pm.collectionVariables.set('accessToken', response.access);",
+									"    pm.collectionVariables.set('refreshToken', response.refresh);",
+									"}"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"staff1@example.com\",\n  \"password\": \"password123\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/login/",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "auth", "login", ""]
+						}
+					}
+				},
+				{
+					"name": "Get Profile",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/profile/",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "auth", "profile", ""]
+						}
+					}
+				},
+				{
+					"name": "Logout",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"refresh\": \"{{refreshToken}}\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/logout/",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "auth", "logout", ""]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "📋 Purchase Requests",
+			"item": [
+				{
+					"name": "List Requests",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{baseUrl}}/api/requests/",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "requests", ""]
+						}
+					}
+				},
+				{
+					"name": "Create Request",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    const response = pm.response.json();",
+									"    pm.collectionVariables.set('requestId', response.id);",
+									"}"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"title\": \"Office Supplies Request\",\n  \"description\": \"Need office supplies for Q1 2024\",\n  \"amount\": \"500.00\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/requests/",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "requests", ""]
+						}
+					}
+				},
+				{
+					"name": "Get Request Details",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{baseUrl}}/api/requests/{{requestId}}/",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "requests", "{{requestId}}", ""]
+						}
+					}
+				},
+				{
+					"name": "Update Request",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"title\": \"Updated Office Supplies Request\",\n  \"description\": \"Updated description for office supplies\",\n  \"amount\": \"750.00\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/requests/{{requestId}}/",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "requests", "{{requestId}}", ""]
+						}
+					}
+				},
+				{
+					"name": "Approve Request",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"comments\": \"Approved for processing\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/requests/{{requestId}}/approve/",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "requests", "{{requestId}}", "approve", ""]
+						}
+					}
+				},
+				{
+					"name": "Reject Request",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"comments\": \"Insufficient budget allocation\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/requests/{{requestId}}/reject/",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "requests", "{{requestId}}", "reject", ""]
+						}
+					}
+				},
+				{
+					"name": "Submit Receipt",
+					"request": {
+						"method": "POST",
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "receipt",
+									"type": "file",
+									"src": []
+								}
+							]
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/requests/{{requestId}}/submit-receipt/",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "requests", "{{requestId}}", "submit-receipt", ""]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "📄 Document Processing",
+			"item": [
+				{
+					"name": "Process Document",
+					"request": {
+						"method": "POST",
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "file",
+									"type": "file",
+									"src": []
+								},
+								{
+									"key": "document_type",
+									"value": "proforma",
+									"type": "text"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/documents/process/",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "documents", "process", ""]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "📋 Proforma Workflow",
+			"item": [
+				{
+					"name": "Upload Proforma",
+					"request": {
+						"method": "POST",
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "file",
+									"type": "file",
+									"src": []
+								}
+							]
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/proforma/proforma/upload/",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "proforma", "proforma", "upload", ""]
+						}
+					}
+				},
+				{
+					"name": "Generate PO from Proforma",
+					"request": {
+						"method": "POST",
+						"url": {
+							"raw": "{{baseUrl}}/api/proforma/proforma/1/generate-po/",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "proforma", "proforma", "1", "generate-po", ""]
+						}
+					}
+				},
+				{
+					"name": "Validate Receipt against PO",
+					"request": {
+						"method": "POST",
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "file",
+									"type": "file",
+									"src": []
+								}
+							]
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/proforma/po/1/validate-receipt/",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "proforma", "po", "1", "validate-receipt", ""]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "📚 API Documentation",
+			"item": [
+				{
+					"name": "OpenAPI Schema",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{baseUrl}}/api/schema/",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "schema", ""]
+						}
+					}
+				},
+				{
+					"name": "Swagger UI",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{baseUrl}}/api/docs/",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "docs", ""]
+						}
+					}
+				},
+				{
+					"name": "ReDoc",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{baseUrl}}/api/redoc/",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "redoc", ""]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "🏥 Health Check",
+			"item": [
+				{
+					"name": "Health Check",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{baseUrl}}/health/",
+							"host": ["{{baseUrl}}"],
+							"path": ["health", ""]
+						}
+					}
+				},
+				{
+					"name": "Root Endpoint",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{baseUrl}}/",
+							"host": ["{{baseUrl}}"],
+							"path": [""]
+						}
+					}
+				}
+			]
+		}
+	]
+}
