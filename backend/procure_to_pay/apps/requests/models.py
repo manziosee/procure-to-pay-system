@@ -45,6 +45,18 @@ class PurchaseRequest(models.Model):
     receipt_data = models.JSONField(default=dict, blank=True)
     validation_results = models.JSONField(default=dict, blank=True)
     
+    # Store file content in database for reliable access
+    proforma_content = models.BinaryField(null=True, blank=True)
+    proforma_filename = models.CharField(max_length=255, blank=True)
+    proforma_content_type = models.CharField(max_length=100, blank=True)
+    
+    purchase_order_content = models.BinaryField(null=True, blank=True)
+    purchase_order_filename = models.CharField(max_length=255, blank=True)
+    
+    receipt_content = models.BinaryField(null=True, blank=True)
+    receipt_filename = models.CharField(max_length=255, blank=True)
+    receipt_content_type = models.CharField(max_length=100, blank=True)
+    
     class Meta:
         ordering = ['-created_at']
         indexes = [

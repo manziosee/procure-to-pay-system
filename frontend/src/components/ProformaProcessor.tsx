@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { FileUpload } from '@/components/FileUpload';
-import { documents, proforma } from '@/services/api';
+import { documents } from '@/services/api';
 
 interface ProformaProcessorProps {
   onDataExtracted?: (data: any) => void;
@@ -27,25 +27,48 @@ export const ProformaProcessor: React.FC<ProformaProcessorProps> = ({
     setIsProcessing(true);
 
     try {
-      // First upload to proforma service
-      const uploadResult = await proforma.upload(file);
-      
-      // Then process with AI document processing
+      // Process with AI document processing
       const processResult = await documents.process(file);
       
-      const combinedData = {
-        ...processResult.data,
-        proforma_id: uploadResult.data.id,
-        upload_url: uploadResult.data.file_url
+      const extractedData = processResult.data.extracted_data || {};
+      
+      // Ensure consistent data structure
+      const normalizedData = {
+        vendor_name: extractedData.vendor || 'Unknown Vendor',
+        total_amount: extractedData.total_amount || '0.00',
+        items: extractedData.items || [],
+        terms: extractedData.terms || 'Net 30',
+        confidence: extractedData.confidence || 0.5,
+        processing_method: processResult.data.processing_method || 'Unknown'
       };
       
-      setExtractedData(combinedData);
-      onDataExtracted?.(combinedData);
+      setExtractedData(normalizedData);
+      onDataExtracted?.(normalizedData);
       onFileUploaded?.(file);
       
     } catch (err: any) {
       console.error('Error processing proforma:', err);
-      setError(err.response?.data?.message || 'Failed to process proforma');
+      console.error('Error response:', err.response);
+      console.error('Error status:', err.response?.status);
+      console.error('Error data:', err.response?.data);
+      
+      let errorMessage = 'Failed to process proforma';
+      
+      if (err.response?.status === 400) {
+        errorMessage = err.response?.data?.error || 'Invalid file or request format';
+      } else if (err.response?.status === 401) {
+        errorMessage = 'Authentication required. Please login again.';
+      } else if (err.response?.status === 413) {
+        errorMessage = 'File too large. Maximum size is 15MB.';
+      } else if (err.response?.status === 429) {
+        errorMessage = 'Too many requests. Please wait and try again.';
+      } else if (err.response?.data?.error) {
+        errorMessage = err.response.data.error;
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+      
+      setError(errorMessage);
     } finally {
       setIsProcessing(false);
     }
@@ -59,14 +82,14 @@ export const ProformaProcessor: React.FC<ProformaProcessorProps> = ({
           Proforma Invoice Processing
         </CardTitle>
         <CardDescription>
-          Upload your proforma invoice. AI will extract items, prices, and vendor information automatically.
+          Upload your proforma invoice in any format (PDF, JPG, PNG, TXT, CSV, etc.). AI will extract items, prices, and vendor information automatically.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <FileUpload
           onFileSelect={handleFileUpload}
-          accept=".pdf,.jpg,.jpeg,.png"
-          maxSize={10 * 1024 * 1024} // 10MB
+          accept=".pdf,.jpg,.jpeg,.png,.bmp,.tiff,.gif,.txt,.text,.csv"
+          maxSize={15 * 1024 * 1024} // 15MB
           label="Upload Proforma Invoice"
         />
 
@@ -77,7 +100,7 @@ export const ProformaProcessor: React.FC<ProformaProcessorProps> = ({
                 <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
                 <div>
                   <p className="font-semibold">Processing with AI...</p>
-                  <p className="text-sm">Extracting items, prices, and vendor details from your proforma.</p>
+                  <p className="text-sm">Using OCR and AI to extract items, prices, and vendor details from your document.</p>
                 </div>
               </div>
             </AlertDescription>
@@ -107,21 +130,38 @@ export const ProformaProcessor: React.FC<ProformaProcessorProps> = ({
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
                     <p className="font-medium">Vendor:</p>
-                    <p>{extractedData.vendor_name || 'Not detected'}</p>
+                    <p>{extractedData.vendor_name || extractedData.vendor || 'Not detected'}</p>
                   </div>
                   <div>
                     <p className="font-medium">Total Amount:</p>
-                    <p>{extractedData.total_amount ? `${parseFloat(extractedData.total_amount).toLocaleString('en-RW', { style: 'currency', currency: 'RWF' })}` : 'Not detected'}</p>
+                    <p>{extractedData.total_amount ? `RWF ${parseFloat(extractedData.total_amount).toLocaleString()}` : 'Not detected'}</p>
                   </div>
                   <div>
                     <p className="font-medium">Items Found:</p>
                     <Badge variant="secondary">{extractedData.items?.length || 0} items</Badge>
                   </div>
                   <div>
-                    <p className="font-medium">Confidence:</p>
-                    <Badge className={extractedData.confidence > 0.8 ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}>
-                      {Math.round((extractedData.confidence || 0) * 100)}%
+                    <p className="font-medium">Processing:</p>
+                    <Badge className={extractedData.processing_method === 'AI' ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'}>
+                      {extractedData.processing_method || 'Unknown'}
                     </Badge>
+                  </div>
+                  <div className="col-span-2">
+                    <p className="font-medium">Confidence:</p>
+                    <div className="flex items-center gap-2">
+                      <div className="flex-1 bg-gray-200 rounded-full h-2">
+                        <div 
+                          className={`h-2 rounded-full ${
+                            (extractedData.confidence || 0) > 0.7 ? 'bg-green-500' : 
+                            (extractedData.confidence || 0) > 0.4 ? 'bg-yellow-500' : 'bg-red-500'
+                          }`}
+                          style={{ width: `${Math.round((extractedData.confidence || 0) * 100)}%` }}
+                        ></div>
+                      </div>
+                      <span className="text-xs font-medium">
+                        {Math.round((extractedData.confidence || 0) * 100)}%
+                      </span>
+                    </div>
                   </div>
                 </div>
 
@@ -133,7 +173,7 @@ export const ProformaProcessor: React.FC<ProformaProcessorProps> = ({
                         <div key={index} className="text-xs bg-white p-2 rounded border">
                           <span className="font-medium">{item.name}</span> - 
                           <span className="ml-1">Qty: {item.quantity}</span> - 
-                          <span className="ml-1">{parseFloat(item.unit_price).toLocaleString('en-RW', { style: 'currency', currency: 'RWF' })}</span>
+                          <span className="ml-1">RWF {parseFloat(item.unit_price || 0).toLocaleString()}</span>
                         </div>
                       ))}
                     </div>

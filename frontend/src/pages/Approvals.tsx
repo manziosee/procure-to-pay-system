@@ -162,13 +162,16 @@ export default function Approvals() {
   const [approveDialogOpen, setApproveDialogOpen] = useState(false);
   const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
 
+  const [approveComments, setApproveComments] = useState('');
+
   const handleApprove = async (request: PurchaseRequest) => {
     try {
       const { purchaseRequests } = await import('@/services/api');
-      await purchaseRequests.approve(request.id.toString());
+      await purchaseRequests.approve(request.id.toString(), approveComments);
       alert('Request approved successfully!');
       setApproveDialogOpen(false);
       setSelectedRequest(null);
+      setApproveComments('');
       // Reload requests
       window.location.reload();
     } catch (error) {
@@ -246,11 +249,24 @@ export default function Approvals() {
                             <DialogHeader>
                               <DialogTitle className="text-black text-xl font-semibold">Approve Request</DialogTitle>
                               <DialogDescription className="text-gray-600 mt-2">
-                                Are you sure you want to approve "{selectedRequest?.title}"?
+                                Approve "{selectedRequest?.title}" and provide comments for the team.
                               </DialogDescription>
                             </DialogHeader>
+                            <div className="space-y-3 mt-4">
+                              <Label htmlFor="approve-comments" className="text-black font-medium">Approval Comments (Optional)</Label>
+                              <Textarea
+                                id="approve-comments"
+                                placeholder="Add comments about why this request is approved..."
+                                value={approveComments}
+                                onChange={(e) => setApproveComments(e.target.value)}
+                                className="border-gray-300 focus:border-green-500 focus:ring-green-500 bg-white min-h-[80px]"
+                              />
+                            </div>
                             <DialogFooter className="mt-6 flex gap-3">
-                              <Button variant="outline" onClick={() => setApproveDialogOpen(false)} className="border-gray-300">
+                              <Button variant="outline" onClick={() => {
+                                setApproveDialogOpen(false);
+                                setApproveComments('');
+                              }} className="border-gray-300">
                                 Cancel
                               </Button>
                               <Button 

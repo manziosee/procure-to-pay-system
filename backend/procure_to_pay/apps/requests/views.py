@@ -1,5 +1,8 @@
 from rest_framework import generics, status
 from rest_framework.decorators import action
+from django.http import HttpResponse, Http404
+from django.conf import settings
+import os
 from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet
 from rest_framework.permissions import IsAuthenticated
@@ -9,7 +12,7 @@ from drf_spectacular.utils import extend_schema, extend_schema_view
 from .models import PurchaseRequest, Approval, RequestItem
 from .serializers import PurchaseRequestSerializer, RequestItemSerializer
 from .permissions import CanApproveRequest, CanUpdateRequest
-from ..documents.services import DocumentProcessor, POGenerator
+from ..documents.services import DocumentProcessor
 
 @extend_schema_view(
     list=extend_schema(description="List purchase requests (filtered by user role)", tags=['Purchase Requests']),
@@ -93,12 +96,14 @@ class PurchaseRequestViewSet(ModelViewSet):
             return Response({'error': 'Request is not pending'}, 
                           status=status.HTTP_400_BAD_REQUEST)
         
+        comments = request.data.get('comments', '').strip()
+        
         approval, created = Approval.objects.get_or_create(
             request=purchase_request,
             approver=request.user,
             defaults={
                 'approved': approved,
-                'comments': request.data.get('comments', '')
+                'comments': comments
             }
         )
         
@@ -123,13 +128,15 @@ class PurchaseRequestViewSet(ModelViewSet):
                 
                 # Generate PO automatically
                 try:
+                    from ..documents.services import POGenerator
                     po_generator = POGenerator()
                     po_file = po_generator.generate_po(purchase_request)
                     purchase_request.purchase_order = po_file
                     purchase_request.save()
+                    print(f"PO generated successfully for request {purchase_request.id}")
                 except Exception as e:
+                    print(f"PO generation failed for request {purchase_request.id}: {e}")
                     # Log error but don't fail the approval
-                    pass
         
         return Response({
             'message': f'Request {"approved" if approved else "rejected"} successfully',
@@ -161,11 +168,27 @@ class PurchaseRequestViewSet(ModelViewSet):
                 request.data['proforma_data'] = proforma_data
                 
             except Exception as e:
-                # Don't fail the update for processing errors
                 print(f"Proforma processing failed: {e}")
                 pass
         
-        return super().update(request, *args, **kwargs)
+        response = super().update(request, *args, **kwargs)
+        
+        # Store file content in database after update
+        if response.status_code == 200 and 'proforma' in request.FILES:
+            try:
+                uploaded_file = request.FILES['proforma']
+                
+                # Store file content in database
+                uploaded_file.seek(0)
+                instance.proforma_content = uploaded_file.read()
+                instance.proforma_filename = uploaded_file.name
+                instance.proforma_content_type = uploaded_file.content_type or 'application/octet-stream'
+                instance.save()
+                
+            except Exception as e:
+                print(f"Failed to store proforma content: {e}")
+        
+        return response
     
     def create(self, request, *args, **kwargs):
         # Process proforma if uploaded
@@ -181,12 +204,28 @@ class PurchaseRequestViewSet(ModelViewSet):
                 request.data['proforma_data'] = proforma_data
                 
             except Exception as e:
-                # Don't fail the request creation for processing errors
-                # Just log and continue without extracted data
                 print(f"Proforma processing failed: {e}")
                 pass
         
-        return super().create(request, *args, **kwargs)
+        response = super().create(request, *args, **kwargs)
+        
+        # Store file content in database after creation
+        if response.status_code == 201 and 'proforma' in request.FILES:
+            try:
+                purchase_request = PurchaseRequest.objects.get(id=response.data['id'])
+                uploaded_file = request.FILES['proforma']
+                
+                # Store file content in database
+                uploaded_file.seek(0)
+                purchase_request.proforma_content = uploaded_file.read()
+                purchase_request.proforma_filename = uploaded_file.name
+                purchase_request.proforma_content_type = uploaded_file.content_type or 'application/octet-stream'
+                purchase_request.save()
+                
+            except Exception as e:
+                print(f"Failed to store proforma content: {e}")
+        
+        return response
     
     @extend_schema(
         description="Submit receipt for approved request (Staff only)",
@@ -219,9 +258,17 @@ class PurchaseRequestViewSet(ModelViewSet):
                 receipt_data, purchase_request.proforma_data
             )
             
+            # Store receipt file and content
             purchase_request.receipt = receipt
             purchase_request.receipt_data = receipt_data
             purchase_request.validation_results = validation_results
+            
+            # Store receipt content in database
+            receipt.seek(0)
+            purchase_request.receipt_content = receipt.read()
+            purchase_request.receipt_filename = receipt.name
+            purchase_request.receipt_content_type = receipt.content_type or 'application/octet-stream'
+            
             purchase_request.save()
             
             return Response({
@@ -232,4 +279,89 @@ class PurchaseRequestViewSet(ModelViewSet):
             })
         except Exception as e:
             return Response({'error': f'Receipt processing failed: {str(e)}'}, 
+                          status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
+    @extend_schema(
+        description="Download document file (Finance users only)",
+        responses={200: None, 403: None, 404: None},
+        tags=['Purchase Requests']
+    )
+    @action(detail=True, methods=['get'], url_path='download/(?P<doc_type>\w+)')
+    def download_document(self, request, pk=None, doc_type=None):
+        purchase_request = self.get_object()
+        
+        # Allow staff, finance, and approvers to download documents
+        if request.user.role not in ['finance', 'staff', 'approver_level_1', 'approver_level_2']:
+            return Response({'error': 'Permission denied'}, 
+                          status=status.HTTP_403_FORBIDDEN)
+        
+        file_content = None
+        filename = None
+        content_type = 'application/octet-stream'
+        
+        # Get file from database storage
+        if doc_type == 'proforma':
+            if purchase_request.proforma_content:
+                file_content = purchase_request.proforma_content
+                filename = purchase_request.proforma_filename or f'proforma-{pk}.pdf'
+                content_type = purchase_request.proforma_content_type or 'application/pdf'
+            else:
+                return Response({'error': 'No proforma document found'}, 
+                              status=status.HTTP_404_NOT_FOUND)
+        
+        elif doc_type == 'purchase_order':
+            if purchase_request.purchase_order_content:
+                file_content = purchase_request.purchase_order_content
+                filename = purchase_request.purchase_order_filename or f'purchase-order-{pk}.pdf'
+                content_type = 'application/pdf'
+            elif purchase_request.status == 'approved':
+                # Generate PO on demand
+                try:
+                    from ..documents.services import POGenerator
+                    po_generator = POGenerator()
+                    po_file = po_generator.generate_po(purchase_request)
+                    
+                    # Store PO content in database
+                    if hasattr(po_file, 'read'):
+                        po_file.seek(0)
+                        file_content = po_file.read()
+                    else:
+                        file_content = po_file.getvalue() if hasattr(po_file, 'getvalue') else po_file
+                    
+                    purchase_request.purchase_order_content = file_content
+                    purchase_request.purchase_order_filename = f'PO-{pk}.pdf'
+                    purchase_request.save()
+                    
+                    filename = f'purchase-order-{pk}.pdf'
+                    content_type = 'application/pdf'
+                    
+                except Exception as e:
+                    return Response({'error': f'Failed to generate PO: {str(e)}'}, 
+                                  status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            else:
+                return Response({'error': 'No purchase order found'}, 
+                              status=status.HTTP_404_NOT_FOUND)
+        
+        elif doc_type == 'receipt':
+            if purchase_request.receipt_content:
+                file_content = purchase_request.receipt_content
+                filename = purchase_request.receipt_filename or f'receipt-{pk}.pdf'
+                content_type = purchase_request.receipt_content_type or 'application/pdf'
+            else:
+                return Response({'error': 'No receipt document found'}, 
+                              status=status.HTTP_404_NOT_FOUND)
+        
+        if not file_content:
+            return Response({'error': f'No {doc_type} content available'}, 
+                          status=status.HTTP_404_NOT_FOUND)
+        
+        # Serve the file from database
+        try:
+            response = HttpResponse(file_content, content_type=content_type)
+            response['Content-Disposition'] = f'attachment; filename="{filename}"'
+            response['Content-Length'] = len(file_content)
+            return response
+            
+        except Exception as e:
+            return Response({'error': f'Failed to serve file: {str(e)}'}, 
                           status=status.HTTP_500_INTERNAL_SERVER_ERROR)

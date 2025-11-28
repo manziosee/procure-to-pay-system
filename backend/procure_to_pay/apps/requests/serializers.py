@@ -17,9 +17,11 @@ class PurchaseRequestSerializer(serializers.ModelSerializer):
         fields = ['id', 'title', 'description', 'amount', 'status', 'created_by', 
                  'created_by_name', 'created_at', 'updated_at', 'proforma', 
                  'purchase_order', 'receipt', 'approvals', 'items', 'proforma_data',
-                 'receipt_data', 'validation_results']
+                 'receipt_data', 'validation_results', 'proforma_filename', 
+                 'purchase_order_filename', 'receipt_filename']
         read_only_fields = ['created_by', 'status', 'purchase_order', 'proforma_data',
-                           'receipt_data', 'validation_results']
+                           'receipt_data', 'validation_results', 'proforma_filename',
+                           'purchase_order_filename', 'receipt_filename']
     
     def get_approvals(self, obj):
         return ApprovalSerializer(obj.approvals.all(), many=True).data

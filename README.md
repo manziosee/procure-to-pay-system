@@ -84,6 +84,7 @@ A comprehensive **Procure-to-Pay** system with Django REST API backend and React
 ### Prerequisites
 - [Docker](https://www.docker.com/) and Docker Compose
 - [Git](https://git-scm.com/)
+- **OpenAI API Key** - Get yours at [https://platform.openai.com/api-keys](https://platform.openai.com/api-keys)
 
 ### 📦 Installation
 
@@ -93,15 +94,30 @@ A comprehensive **Procure-to-Pay** system with Django REST API backend and React
    cd procure-to-pay-system
    ```
 
-2. **Choose your setup method:**
+2. **Get OpenAI API Key**
+   - Visit [https://platform.openai.com/api-keys](https://platform.openai.com/api-keys)
+   - Create a new API key
+   - Copy the key for the next step
+
+3. **Configure Environment**
+   ```bash
+   # Create .env file (NOT committed to git)
+   cp backend/.env.example backend/.env
+   # Edit backend/.env and add your OpenAI API key
+   OPENAI_API_KEY=sk-your-actual-api-key-here
+   ```
+
+4. **Choose your setup method:**
 
    **Development Setup (Uses Render PostgreSQL)**
    ```bash
+   # Make sure to set your OpenAI API key in docker-compose.yml first
    docker-compose up --build
    ```
 
    **Production Setup**
    ```bash
+   # Make sure to set your OpenAI API key in docker-compose.prod.yml first
    docker-compose -f docker-compose.prod.yml up --build
    ```
 
@@ -235,8 +251,9 @@ graph TD
 ### 🤖 **AI Integration**
 - **OCR Processing**: Extract text from images using pytesseract
 - **PDF Processing**: Extract data from PDF documents
-- **OpenAI Integration**: Intelligent data extraction from documents
+- **OpenAI Integration**: Intelligent data extraction from documents (requires API key)
 - **Receipt Validation**: Compare receipts against purchase orders
+- **Setup**: Get your OpenAI API key at [https://platform.openai.com/api-keys](https://platform.openai.com/api-keys)
 
 ### 📊 **Data Models**
 - **User**: Extended with roles and departments
@@ -248,6 +265,24 @@ graph TD
 ### 🔧 Configuration
 
 See [DEPLOYMENT.md](DEPLOYMENT.md) for complete environment setup.
+
+### 🔑 **OpenAI API Key Setup**
+
+**Required for AI document processing features:**
+
+1. **Get API Key**: Visit [https://platform.openai.com/api-keys](https://platform.openai.com/api-keys)
+2. **Create New Key**: Click "Create new secret key"
+3. **Copy Key**: Save the key securely (starts with `sk-`)
+4. **Add to Environment**:
+   ```bash
+   # In your .env file (NOT committed to git)
+   OPENAI_API_KEY=sk-your-actual-key-here
+   
+   # OR set as environment variable
+   export OPENAI_API_KEY=sk-your-actual-key-here
+   ```
+
+**Without API Key**: System works with basic text extraction (no AI features)
 
 ## 💻 Development
 

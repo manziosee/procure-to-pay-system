@@ -140,7 +140,13 @@ export const purchaseRequests = {
         'Content-Type': 'multipart/form-data',
       },
     });
-  }
+  },
+
+  // Download document (Finance only)
+  downloadDocument: (id: string, docType: 'proforma' | 'purchase_order' | 'receipt') => 
+    api.get(`/requests/${id}/download/${docType}/`, {
+      responseType: 'blob'
+    })
 };
 
 // Documents API
@@ -149,6 +155,7 @@ export const documents = {
   process: (file: File) => {
     const formData = new FormData();
     formData.append('file', file);
+    formData.append('document_type', 'proforma');
     return api.post('/documents/process/', formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
