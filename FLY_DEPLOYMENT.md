@@ -30,7 +30,7 @@ flyctl postgres attach procure-to-pay-db --app procure-to-pay-backend
 flyctl secrets set \
   SECRET_KEY="django-insecure-fly-production-$(openssl rand -hex 32)" \
   DEBUG="False" \
-  OPENAI_API_KEY="YOUR_OPENAI_API_KEY" \
+  OPENAI_API_KEY=YOUR_OPENAI_API_KEY
   ALLOWED_HOSTS="procure-to-pay-backend.fly.dev,localhost" \
   CORS_ALLOWED_ORIGINS="http://localhost:3000" \
   --app procure-to-pay-backend
