@@ -1,7 +1,7 @@
 version: '3.8'
 
-# Production setup using external PostgreSQL (Render)
-# For local development with PostgreSQL, use: docker-compose -f docker-compose.local.yml up --build
+# Development setup using Neon PostgreSQL
+# For local development with local PostgreSQL, use: docker-compose -f docker-compose.local.yml up --build
 
 services:
 
@@ -26,12 +26,12 @@ services:
       - "8000:8000"
     environment:
       - DEBUG=True
-      - DATABASE_URL=postgresql://procure_to_pay_db_6wh2_user:xejK62m3TQoxXwRlRGgFWSsVfk51EXKX@dpg-d4itlm6r433s73a9n490-a.oregon-postgres.render.com/procure_to_pay_db_6wh2
+      - DATABASE_URL=postgresql://neondb_owner:npg_Ka3CUI5doYtw@ep-calm-voice-ahac80qs-pooler.c-3.us-east-1.aws.neon.tech/neondb
       - REDIS_URL=redis://redis:6379
       - SECRET_KEY=django-insecure-dev-key-change-in-production
       - ALLOWED_HOSTS=localhost,127.0.0.1,backend,0.0.0.0
       - CORS_ALLOWED_ORIGINS=http://localhost:3000,http://127.0.0.1:3000,http://frontend:3000
-      - OPENAI_API_KEY=your-openai-api-key-here
+      - OPENAI_API_KEY=YOUR_OPENAI_API_KEY
     volumes:
       - ./backend:/app
       - media_files:/app/media
