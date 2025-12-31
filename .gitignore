@@ -1,0 +1,51 @@
+# Environment files with secrets
+.env
+.env.local
+.env.production
+.env.render
+backend/.env
+backend/.env.local
+backend/.env.production
+backend/.env.render
+frontend/.env
+frontend/.env.local
+
+# API Keys and secrets
+**/OPENAI_API_KEY*
+**/*api*key*
+**/*secret*
+
+# Database
+*.db
+*.sqlite3
+
+# Logs
+*.log
+logs/
+
+# Dependencies
+node_modules/
+__pycache__/
+*.pyc
+
+# Build outputs
+dist/
+build/
+staticfiles/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker
+.dockerignore
+
+# Temporary files
+*.tmp
+*.temp

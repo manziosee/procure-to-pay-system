@@ -1,0 +1,482 @@
+{
+  "info": {
+    "name": "Procure-to-Pay System API v2.0",
+    "description": "Complete API collection for Procure-to-Pay System with Render PostgreSQL database, JWT authentication, multi-level approval workflow, and AI-powered document processing. Includes all endpoints for user management, purchase requests, approvals, and document processing.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "version": "2.0.0"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{access_token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "https://procure-to-pay-backend.fly.dev",
+      "type": "string"
+    },
+    {
+      "key": "local_url",
+      "value": "http://localhost:8000",
+      "type": "string"
+    },
+    {
+      "key": "access_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "refresh_token",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "Register User",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"testuser\",\n  \"email\": \"test@example.com\",\n  \"first_name\": \"Test\",\n  \"last_name\": \"User\",\n  \"role\": \"staff\",\n  \"department\": \"IT\",\n  \"password\": \"password123\",\n  \"password_confirm\": \"password123\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/register/",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "register", ""]
+            }
+          }
+        },
+        {
+          "name": "Login User",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    pm.collectionVariables.set('access_token', response.access);",
+                  "    pm.collectionVariables.set('refresh_token', response.refresh);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"john@company.com\",\n  \"password\": \"password123\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/login/",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "login", ""]
+            }
+          }
+        },
+        {
+          "name": "Get User Profile",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/auth/profile/",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "profile", ""]
+            }
+          }
+        },
+        {
+          "name": "Refresh Token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    pm.collectionVariables.set('access_token', response.access);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refresh\": \"{{refresh_token}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/refresh/",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "refresh", ""]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Purchase Requests",
+      "item": [
+        {
+          "name": "List Purchase Requests",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/requests/",
+              "host": ["{{base_url}}"],
+              "path": ["api", "requests", ""]
+            }
+          }
+        },
+        {
+          "name": "Create Purchase Request",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Office Supplies Request\",\n  \"description\": \"Monthly office supplies including laptops and accessories\",\n  \"amount\": \"2500.00\",\n  \"items\": [\n    {\n      \"name\": \"Laptop\",\n      \"quantity\": 2,\n      \"unit_price\": \"1000.00\",\n      \"total_price\": \"2000.00\"\n    },\n    {\n      \"name\": \"Mouse\",\n      \"quantity\": 5,\n      \"unit_price\": \"25.00\",\n      \"total_price\": \"125.00\"\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/requests/",
+              "host": ["{{base_url}}"],
+              "path": ["api", "requests", ""]
+            }
+          }
+        },
+        {
+          "name": "Get Purchase Request Details",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/requests/1/",
+              "host": ["{{base_url}}"],
+              "path": ["api", "requests", "1", ""]
+            }
+          }
+        },
+        {
+          "name": "Update Purchase Request",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Updated Office Supplies Request\",\n  \"description\": \"Updated monthly office supplies\",\n  \"amount\": \"3000.00\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/requests/1/",
+              "host": ["{{base_url}}"],
+              "path": ["api", "requests", "1", ""]
+            }
+          }
+        },
+        {
+          "name": "Approve Purchase Request",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"comments\": \"Approved for processing\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/requests/1/approve/",
+              "host": ["{{base_url}}"],
+              "path": ["api", "requests", "1", "approve", ""]
+            }
+          }
+        },
+        {
+          "name": "Reject Purchase Request",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"comments\": \"Budget exceeded, please revise\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/requests/1/reject/",
+              "host": ["{{base_url}}"],
+              "path": ["api", "requests", "1", "reject", ""]
+            }
+          }
+        },
+        {
+          "name": "Submit Receipt",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "receipt",
+                  "type": "file",
+                  "src": []
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/requests/1/submit-receipt/",
+              "host": ["{{base_url}}"],
+              "path": ["api", "requests", "1", "submit-receipt", ""]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Document Processing",
+      "item": [
+        {
+          "name": "Process Document",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": []
+                },
+                {
+                  "key": "document_type",
+                  "value": "proforma",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/documents/process/",
+              "host": ["{{base_url}}"],
+              "path": ["api", "documents", "process", ""]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Proforma & PO System",
+      "item": [
+        {
+          "name": "Upload Proforma",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": []
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/proforma/upload/",
+              "host": ["{{base_url}}"],
+              "path": ["api", "proforma", "upload", ""]
+            }
+          }
+        },
+        {
+          "name": "Generate PO from Proforma",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/proforma/1/generate-po/",
+              "host": ["{{base_url}}"],
+              "path": ["api", "proforma", "1", "generate-po", ""]
+            }
+          }
+        },
+        {
+          "name": "Validate Receipt Against PO",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": []
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/proforma/po/1/validate-receipt/",
+              "host": ["{{base_url}}"],
+              "path": ["api", "proforma", "po", "1", "validate-receipt", ""]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "System Info",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/health/",
+              "host": ["{{base_url}}"],
+              "path": ["health", ""]
+            }
+          }
+        },
+        {
+          "name": "API Root",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/",
+              "host": ["{{base_url}}"],
+              "path": [""]
+            }
+          }
+        },
+        {
+          "name": "OpenAPI Schema",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/swagger.json",
+              "host": ["{{base_url}}"],
+              "path": ["swagger.json"]
+            }
+          }
+        },
+        {
+          "name": "ReDoc Documentation",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/redoc/",
+              "host": ["{{base_url}}"],
+              "path": ["redoc", ""]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
