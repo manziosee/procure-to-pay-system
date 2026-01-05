@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { ArrowLeft, Download, CheckCircle, XCircle, Upload, Edit } from 'lucide-react';
+import { ArrowLeft, Download, CheckCircle, XCircle, Upload, Edit, FileText } from 'lucide-react';
 import { StatusBadge } from '@/components/StatusBadge';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -292,100 +292,179 @@ export default function RequestDetail() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="sm" onClick={() => navigate('/')}>
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back
-          </Button>
-          <div>
-            <h1 className="text-3xl font-bold">{request.title}</h1>
-            <p className="text-muted-foreground">Request #{request.id}</p>
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white">
+      <div className="max-w-6xl mx-auto space-y-8 p-6">
+        {/* Header */}
+        <div className="flex items-center justify-between animate-slide-up">
+          <div className="flex items-center gap-4">
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={() => navigate('/')}
+              className="hover:bg-gray-100 transition-all duration-300"
+            >
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Back to Dashboard
+            </Button>
+            <div>
+              <h1 className="text-4xl font-bold text-black gradient-text">{request.title}</h1>
+              <p className="text-lg text-gray-600 font-medium">Request #{request.id}</p>
+            </div>
+          </div>
+          <div className="animate-scale-in">
+            {getStatusBadge(request.status)}
           </div>
         </div>
-        {getStatusBadge(request.status)}
-      </div>
 
-      {error && (
-        <Alert variant="destructive">
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      )}
+        {error && (
+          <Alert variant="destructive" className="animate-slide-up">
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
 
-      <div className="grid gap-6 md:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>Request Information</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <p className="text-sm text-muted-foreground">Description</p>
-              <p className="mt-1">{request.description}</p>
-            </div>
-            <Separator />
-            <div>
-              <p className="text-sm text-muted-foreground">Amount</p>
-              <p className="text-2xl font-bold mt-1">{parseFloat(request.amount).toLocaleString('en-RW', { style: 'currency', currency: 'RWF' })}</p>
-            </div>
-            <Separator />
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <p className="text-sm text-muted-foreground">Created By</p>
-                <p className="mt-1">{request.created_by_name}</p>
+        <div className="grid gap-8 lg:grid-cols-2 animate-scale-in">
+          {/* Request Information */}
+          <Card className="card-premium bg-white border-2 border-gray-200">
+            <CardHeader>
+              <CardTitle className="text-xl font-bold text-black flex items-center">
+                <FileText className="mr-3 h-6 w-6" />
+                Request Information
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+                <p className="text-sm font-semibold text-gray-700 mb-2">Description</p>
+                <p className="text-gray-900 leading-relaxed">{request.description}</p>
               </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Created At</p>
-                <p className="mt-1">{new Date(request.created_at).toLocaleDateString()}</p>
+              <Separator className="bg-gray-200" />
+              <div className="text-center p-6 bg-gradient-to-r from-green-50 to-blue-50 rounded-lg border border-green-200">
+                <p className="text-sm font-semibold text-gray-700 mb-2">Request Amount</p>
+                <p className="text-4xl font-bold text-green-700 mb-1">
+                  {parseFloat(request.amount).toLocaleString('en-RW', { style: 'currency', currency: 'RWF' })}
+                </p>
+                <p className="text-sm text-green-600">Total requested amount</p>
               </div>
-            </div>
-          </CardContent>
-        </Card>
+              <Separator className="bg-gray-200" />
+              <div className="grid grid-cols-2 gap-6">
+                <div className="text-center p-4 bg-blue-50 rounded-lg border border-blue-200">
+                  <p className="text-sm font-semibold text-blue-700 mb-2">Created By</p>
+                  <p className="text-lg font-bold text-blue-900">{request.created_by_name}</p>
+                </div>
+                <div className="text-center p-4 bg-purple-50 rounded-lg border border-purple-200">
+                  <p className="text-sm font-semibold text-purple-700 mb-2">Created At</p>
+                  <p className="text-lg font-bold text-purple-900">
+                    {new Date(request.created_at).toLocaleDateString()}
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
 
-        <Card>
+        <Card className="card-premium bg-white border-2 border-gray-200">
           <CardHeader>
-            <CardTitle>Documents</CardTitle>
+            <CardTitle className="text-xl font-bold text-black flex items-center">
+              <FileText className="mr-3 h-6 w-6" />
+              Documents & AI Processing
+            </CardTitle>
+            <CardDescription className="text-gray-600">
+              AI-powered document processing and validation
+            </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <p className="text-sm font-medium mb-2">Proforma Invoice</p>
+          <CardContent className="space-y-6">
+            {/* Proforma Invoice */}
+            <div className="p-4 border-2 border-blue-100 rounded-lg bg-blue-50">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center">
+                  <div className="h-10 w-10 bg-blue-200 rounded-full flex items-center justify-center mr-3">
+                    📄
+                  </div>
+                  <div>
+                    <p className="font-semibold text-blue-900">Proforma Invoice</p>
+                    <p className="text-sm text-blue-700">AI-processed document</p>
+                  </div>
+                </div>
+                <div className="flex items-center space-x-2">
+                  {request.proforma && (
+                    <Badge className="bg-green-100 text-green-800 border border-green-300">
+                      ✅ Processed
+                    </Badge>
+                  )}
+                </div>
+              </div>
               {request.proforma ? (
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  className="w-full"
-                  onClick={async () => {
-                    try {
-                      const { purchaseRequests } = await import('@/services/api');
-                      const response = await purchaseRequests.downloadDocument(request.id.toString(), 'proforma');
-                      const blob = new Blob([response.data]);
-                      const url = URL.createObjectURL(blob);
-                      const link = document.createElement('a');
-                      link.href = url;
-                      link.download = `proforma-${request.id}.pdf`;
-                      link.click();
-                      URL.revokeObjectURL(url);
-                    } catch (error) {
-                      console.error('Download failed:', error);
-                      alert('Failed to download proforma');
-                    }
-                  }}
-                >
-                  <Download className="mr-2 h-4 w-4" />
-                  Download Proforma
-                </Button>
+                <div className="space-y-3">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="w-full border-2 border-blue-300 text-blue-700 hover:bg-blue-100 hover:border-blue-400 transition-all duration-300"
+                    onClick={async () => {
+                      try {
+                        const { purchaseRequests } = await import('@/services/api');
+                        const response = await purchaseRequests.downloadDocument(request.id.toString(), 'proforma');
+                        const blob = new Blob([response.data]);
+                        const url = URL.createObjectURL(blob);
+                        const link = document.createElement('a');
+                        link.href = url;
+                        link.download = `proforma-${request.id}.pdf`;
+                        link.click();
+                        URL.revokeObjectURL(url);
+                      } catch (error) {
+                        console.error('Download failed:', error);
+                        alert('Failed to download proforma');
+                      }
+                    }}
+                  >
+                    <Download className="mr-2 h-4 w-4" />
+                    Download Proforma
+                  </Button>
+                  {request.ai_extracted_data && (
+                    <div className="p-3 bg-blue-100 rounded-lg border border-blue-200">
+                      <p className="text-sm font-semibold text-blue-900 mb-2">🤖 AI Extracted Data:</p>
+                      <div className="text-sm text-blue-800 space-y-1">
+                        {Object.entries(request.ai_extracted_data).map(([key, value]) => (
+                          <div key={key} className="flex justify-between">
+                            <span className="font-medium">{key.replace('_', ' ').toUpperCase()}:</span>
+                            <span>{String(value)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
               ) : (
-                <p className="text-sm text-muted-foreground">No file uploaded</p>
+                <div className="text-center py-4">
+                  <div className="text-4xl mb-2">📄</div>
+                  <p className="text-sm text-blue-700 font-medium">No file uploaded</p>
+                  <p className="text-xs text-blue-600">Upload a proforma for AI processing</p>
+                </div>
               )}
             </div>
 
-            <div>
-              <p className="text-sm font-medium mb-2">Purchase Order</p>
+            {/* Purchase Order */}
+            <div className="p-4 border-2 border-green-100 rounded-lg bg-green-50">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center">
+                  <div className="h-10 w-10 bg-green-200 rounded-full flex items-center justify-center mr-3">
+                    📋
+                  </div>
+                  <div>
+                    <p className="font-semibold text-green-900">Purchase Order</p>
+                    <p className="text-sm text-green-700">Auto-generated on approval</p>
+                  </div>
+                </div>
+                <div className="flex items-center space-x-2">
+                  {(request.purchase_order || request.status === 'approved') && (
+                    <Badge className="bg-green-100 text-green-800 border border-green-300">
+                      ✅ Generated
+                    </Badge>
+                  )}
+                </div>
+              </div>
               {request.purchase_order || request.status === 'approved' ? (
                 <Button 
                   variant="outline" 
                   size="sm" 
-                  className="w-full"
+                  className="w-full border-2 border-green-300 text-green-700 hover:bg-green-100 hover:border-green-400 transition-all duration-300"
                   onClick={async () => {
                     try {
                       const { purchaseRequests } = await import('@/services/api');
@@ -407,205 +486,292 @@ export default function RequestDetail() {
                   Download PO
                 </Button>
               ) : (
-                <p className="text-sm text-muted-foreground">Not generated yet</p>
+                <div className="text-center py-4">
+                  <div className="text-4xl mb-2">⏳</div>
+                  <p className="text-sm text-green-700 font-medium">Not generated yet</p>
+                  <p className="text-xs text-green-600">Will be auto-generated upon approval</p>
+                </div>
               )}
             </div>
 
-            <div>
-              <p className="text-sm font-medium mb-2">Receipt</p>
+            {/* Receipt */}
+            <div className="p-4 border-2 border-purple-100 rounded-lg bg-purple-50">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center">
+                  <div className="h-10 w-10 bg-purple-200 rounded-full flex items-center justify-center mr-3">
+                    🧾
+                  </div>
+                  <div>
+                    <p className="font-semibold text-purple-900">Receipt</p>
+                    <p className="text-sm text-purple-700">AI-validated against PO</p>
+                  </div>
+                </div>
+                <div className="flex items-center space-x-2">
+                  {request.receipt && (
+                    <Badge className="bg-purple-100 text-purple-800 border border-purple-300">
+                      ✅ Validated
+                    </Badge>
+                  )}
+                </div>
+              </div>
               {request.receipt ? (
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  className="w-full"
-                  onClick={async () => {
-                    try {
-                      const { purchaseRequests } = await import('@/services/api');
-                      const response = await purchaseRequests.downloadDocument(request.id.toString(), 'receipt');
-                      const blob = new Blob([response.data]);
-                      const url = URL.createObjectURL(blob);
-                      const link = document.createElement('a');
-                      link.href = url;
-                      link.download = `receipt-${request.id}.pdf`;
-                      link.click();
-                      URL.revokeObjectURL(url);
-                    } catch (error) {
-                      console.error('Download failed:', error);
-                      alert('Failed to download receipt');
-                    }
-                  }}
-                >
-                  <Download className="mr-2 h-4 w-4" />
-                  Download Receipt
-                </Button>
+                <div className="space-y-3">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="w-full border-2 border-purple-300 text-purple-700 hover:bg-purple-100 hover:border-purple-400 transition-all duration-300"
+                    onClick={async () => {
+                      try {
+                        const { purchaseRequests } = await import('@/services/api');
+                        const response = await purchaseRequests.downloadDocument(request.id.toString(), 'receipt');
+                        const blob = new Blob([response.data]);
+                        const url = URL.createObjectURL(blob);
+                        const link = document.createElement('a');
+                        link.href = url;
+                        link.download = `receipt-${request.id}.pdf`;
+                        link.click();
+                        URL.revokeObjectURL(url);
+                      } catch (error) {
+                        console.error('Download failed:', error);
+                        alert('Failed to download receipt');
+                      }
+                    }}
+                  >
+                    <Download className="mr-2 h-4 w-4" />
+                    Download Receipt
+                  </Button>
+                  {request.receipt_validation_result && (
+                    <div className="p-3 bg-purple-100 rounded-lg border border-purple-200">
+                      <p className="text-sm font-semibold text-purple-900 mb-2">🤖 AI Validation Result:</p>
+                      <div className="text-sm text-purple-800">
+                        <div className="flex items-center space-x-2 mb-1">
+                          <span className={`h-2 w-2 rounded-full ${
+                            request.receipt_validation_result.is_valid ? 'bg-green-500' : 'bg-red-500'
+                          }`}></span>
+                          <span className="font-medium">
+                            {request.receipt_validation_result.is_valid ? 'Valid' : 'Invalid'}
+                          </span>
+                        </div>
+                        {request.receipt_validation_result.confidence && (
+                          <p className="text-xs">Confidence: {Math.round(request.receipt_validation_result.confidence * 100)}%</p>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
               ) : (
-                <p className="text-sm text-muted-foreground">No receipt submitted</p>
+                <div className="text-center py-4">
+                  <div className="text-4xl mb-2">📄</div>
+                  <p className="text-sm text-purple-700 font-medium">No receipt submitted</p>
+                  <p className="text-xs text-purple-600">
+                    {request.status === 'approved' ? 'Submit receipt for AI validation' : 'Available after approval'}
+                  </p>
+                </div>
               )}
             </div>
           </CardContent>
         </Card>
-      </div>
+        </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Approval History</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <ApprovalTimeline approvals={request.approvals} currentStatus={request.status} />
-        </CardContent>
-      </Card>
-
-      {/* Staff Actions */}
-      {user?.role === 'staff' && request.status === 'pending' && request.created_by === user.id && (
-        <Card className="border-gray-200">
+        {/* Approval History */}
+        <Card className="card-premium bg-white border-2 border-gray-200 animate-slide-up">
           <CardHeader>
-            <CardTitle className="text-black">Staff Actions</CardTitle>
-            <CardDescription className="text-gray-600">Edit your pending request</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button asChild className="bg-black text-white hover:bg-gray-800 transition-all duration-300 hover:scale-105">
-              <Link to={`/requests/${id}/edit`}>
-                <Edit className="mr-2 h-4 w-4" />
-                Edit Request
-              </Link>
-            </Button>
-          </CardContent>
-        </Card>
-      )}
-
-      {canApprove && (
-        <Card className="border-gray-200">
-          <CardHeader>
-            <CardTitle className="text-black">Approval Actions</CardTitle>
-            <CardDescription className="text-gray-600">Review and approve or reject this request</CardDescription>
-          </CardHeader>
-          <CardContent className="flex gap-3">
-            <Button onClick={() => setApproveDialog(true)} className="flex-1 bg-green-600 text-white hover:bg-green-700 transition-all duration-300 hover:scale-105">
-              <CheckCircle className="mr-2 h-4 w-4" />
-              Approve
-            </Button>
-            <Button onClick={() => setRejectDialog(true)} className="flex-1 bg-red-600 text-white hover:bg-red-700 border-2 border-red-600 hover:border-red-700 transition-all duration-300 hover:scale-105">
-              <XCircle className="mr-2 h-4 w-4" />
-              Reject
-            </Button>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Show finalized status message */}
-      {user?.role?.includes('approver') && request.status !== 'pending' && (
-        <Card className="border-gray-200">
-          <CardHeader>
-            <CardTitle className="text-black">Request Status</CardTitle>
+            <CardTitle className="text-xl font-bold text-black flex items-center">
+              <CheckCircle className="mr-3 h-6 w-6" />
+              Approval Timeline
+            </CardTitle>
             <CardDescription className="text-gray-600">
-              This request has been {request.status} and cannot be modified
+              Track the approval progress and history
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className={`p-4 rounded-lg text-center ${
-              request.status === 'approved' 
-                ? 'bg-green-50 text-green-800 border border-green-200' 
-                : 'bg-red-50 text-red-800 border border-red-200'
-            }`}>
-              {request.status === 'approved' ? (
-                <CheckCircle className="mx-auto h-8 w-8 mb-2" />
-              ) : (
-                <XCircle className="mx-auto h-8 w-8 mb-2" />
-              )}
-              <p className="font-semibold">
-                Request {request.status.toUpperCase()}
-              </p>
-              <p className="text-sm mt-1">
-                No further approval actions are available
-              </p>
-            </div>
+            <ApprovalTimeline approvals={request.approvals} currentStatus={request.status} />
           </CardContent>
         </Card>
-      )}
 
+        {/* Staff Actions */}
+        {user?.role === 'staff' && request.status === 'pending' && request.created_by === user.id && (
+          <Card className="card-premium bg-white border-2 border-blue-200 animate-slide-up">
+            <CardHeader>
+              <CardTitle className="text-xl font-bold text-blue-800 flex items-center">
+                <Edit className="mr-3 h-6 w-6" />
+                Staff Actions
+              </CardTitle>
+              <CardDescription className="text-blue-600">
+                Edit your pending request before approval
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button asChild className="btn-premium h-12 px-6 text-base font-semibold shadow-lg hover:shadow-xl transition-all duration-300">
+                <Link to={`/requests/${id}/edit`}>
+                  <Edit className="mr-2 h-5 w-5" />
+                  Edit Request
+                </Link>
+              </Button>
+            </CardContent>
+          </Card>
+        )}
 
+        {/* Approval Actions */}
+        {canApprove && (
+          <Card className="card-premium bg-white border-2 border-yellow-200 animate-slide-up">
+            <CardHeader>
+              <CardTitle className="text-xl font-bold text-yellow-800 flex items-center">
+                <CheckCircle className="mr-3 h-6 w-6" />
+                Approval Actions
+              </CardTitle>
+              <CardDescription className="text-yellow-600">
+                Review and approve or reject this request
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="flex gap-4">
+              <Button 
+                onClick={() => setApproveDialog(true)} 
+                className="flex-1 h-12 bg-green-600 text-white hover:bg-green-700 transition-all duration-300 hover:scale-105 font-semibold text-base"
+              >
+                <CheckCircle className="mr-2 h-5 w-5" />
+                Approve Request
+              </Button>
+              <Button 
+                onClick={() => setRejectDialog(true)} 
+                className="flex-1 h-12 bg-red-600 text-white hover:bg-red-700 border-2 border-red-600 hover:border-red-700 transition-all duration-300 hover:scale-105 font-semibold text-base"
+              >
+                <XCircle className="mr-2 h-5 w-5" />
+                Reject Request
+              </Button>
+            </CardContent>
+          </Card>
+        )}
 
-      {canSubmitReceipt && (
-        <ReceiptValidator
-          requestId={id!}
-          purchaseOrder={request.purchase_order}
-          onValidationComplete={(result) => setValidationResult(result)}
-          onReceiptSubmitted={() => {
-            alert('Receipt submitted successfully!');
-            window.location.reload();
-          }}
-        />
-      )}
-
-      <Dialog open={approveDialog} onOpenChange={setApproveDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Approve Request</DialogTitle>
-            <DialogDescription>
-              Are you sure you want to approve this request?
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="approve-comments">Comments (Optional)</Label>
-              <Textarea
-                id="approve-comments"
-                placeholder="Add any comments..."
-                value={comments}
-                onChange={(e) => setComments(e.target.value)}
-                rows={3}
-              />
-            </div>
+        {/* Finalized Status */}
+        {user?.role?.includes('approver') && request.status !== 'pending' && (
+          <Card className={`card-premium border-2 animate-slide-up ${
+            request.status === 'approved' 
+              ? 'bg-green-50 border-green-200' 
+              : 'bg-red-50 border-red-200'
+          }`}>
+            <CardHeader>
+              <CardTitle className={`text-xl font-bold flex items-center ${
+                request.status === 'approved' ? 'text-green-800' : 'text-red-800'
+              }`}>
+                {request.status === 'approved' ? (
+                  <CheckCircle className="mr-3 h-6 w-6" />
+                ) : (
+                  <XCircle className="mr-3 h-6 w-6" />
+                )}
+                Request Status
+              </CardTitle>
+              <CardDescription className={request.status === 'approved' ? 'text-green-600' : 'text-red-600'}>
+                This request has been {request.status} and cannot be modified
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className={`p-6 rounded-lg text-center border-2 ${
+                request.status === 'approved' 
+                  ? 'bg-green-100 text-green-800 border-green-300' 
+                  : 'bg-red-100 text-red-800 border-red-300'
+              }`}>
+                {request.status === 'approved' ? (
+                  <CheckCircle className="mx-auto h-12 w-12 mb-3" />
+                ) : (
+                  <XCircle className="mx-auto h-12 w-12 mb-3" />
+                )}
+                <p className="text-xl font-bold mb-2">
+                  Request {request.status.toUpperCase()}
+                </p>
+                <p className="text-sm">
+                  No further approval actions are available
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+        {/* Receipt Submission */}
+        {canSubmitReceipt && (
+          <div className="animate-slide-up">
+            <ReceiptValidator
+              requestId={id!}
+              purchaseOrder={request.purchase_order}
+              onValidationComplete={(result) => setValidationResult(result)}
+              onReceiptSubmitted={() => {
+                alert('Receipt submitted successfully!');
+                window.location.reload();
+              }}
+            />
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setApproveDialog(false)}>
-              Cancel
-            </Button>
-            <Button
-              onClick={handleApprove}
-              className="bg-green-600 hover:bg-green-700 text-white"
-            >
-              Approve
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        )}
 
-      <Dialog open={rejectDialog} onOpenChange={setRejectDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Reject Request</DialogTitle>
-            <DialogDescription>
-              Please provide a reason for rejecting this request
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="reject-comments">Comments *</Label>
-              <Textarea
-                id="reject-comments"
-                placeholder="Explain why this request is being rejected..."
-                value={comments}
-                onChange={(e) => setComments(e.target.value)}
-                rows={3}
-                required
-              />
+        {/* Dialogs */}
+        <Dialog open={approveDialog} onOpenChange={setApproveDialog}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Approve Request</DialogTitle>
+              <DialogDescription>
+                Are you sure you want to approve this request?
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="approve-comments">Comments (Optional)</Label>
+                <Textarea
+                  id="approve-comments"
+                  placeholder="Add any comments..."
+                  value={comments}
+                  onChange={(e) => setComments(e.target.value)}
+                  rows={3}
+                />
+              </div>
             </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setRejectDialog(false)}>
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={() => handleReject(comments)}
-              disabled={!comments.trim()}
-            >
-              Reject
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setApproveDialog(false)}>
+                Cancel
+              </Button>
+              <Button
+                onClick={handleApprove}
+                className="bg-green-600 hover:bg-green-700 text-white"
+              >
+                Approve
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={rejectDialog} onOpenChange={setRejectDialog}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Reject Request</DialogTitle>
+              <DialogDescription>
+                Please provide a reason for rejecting this request
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="reject-comments">Comments *</Label>
+                <Textarea
+                  id="reject-comments"
+                  placeholder="Explain why this request is being rejected..."
+                  value={comments}
+                  onChange={(e) => setComments(e.target.value)}
+                  rows={3}
+                  required
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setRejectDialog(false)}>
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={() => handleReject(comments)}
+                disabled={!comments.trim()}
+              >
+                Reject
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
     </div>
   );
 }

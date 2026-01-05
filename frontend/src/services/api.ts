@@ -1,13 +1,12 @@
 import axios, { AxiosInstance, InternalAxiosRequestConfig, AxiosResponse } from 'axios';
 
-const API_URL = import.meta.env.VITE_API_URL || 'https://procure-to-pay-system-xnwp.onrender.com/api';
+const API_URL = import.meta.env.VITE_API_URL || 'https://procure-to-pay-backend.fly.dev/api';
 
 const api: AxiosInstance = axios.create({
   baseURL: API_URL,
   headers: {
     'Content-Type': 'application/json',
   },
-  withCredentials: true,
 });
 
 // Request interceptor to add auth token to requests
