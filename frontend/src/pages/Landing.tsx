@@ -188,38 +188,39 @@ export default function Landing() {
       </header>
 
       {/* Hero Section */}
-      <section className="relative pt-28 pb-20 md:pt-40 md:pb-32 bg-black">
-        <div className="absolute inset-0 overflow-hidden">
-          <div className="absolute inset-0 bg-[radial-gradient(rgba(255,255,255,0.1)_1px,transparent_1px)] bg-size-[16px_16px] mask-[radial-gradient(ellipse_50%_50%_at_50%_50%,#000_70%,transparent_100%)]"></div>
+      <section className="relative pt-24 pb-16 bg-black overflow-hidden">
+        <div className="absolute inset-0">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(255,255,255,0.1),transparent_50%)] animate-pulse"></div>
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_80%,rgba(255,255,255,0.05),transparent_50%)] animate-pulse" style={{animationDelay: '1s'}}></div>
         </div>
         <div className="container mx-auto px-4 relative">
           <div className="max-w-4xl mx-auto text-center space-y-6">
-            <div className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-white/10 text-gray-300 border border-white/20 mb-4">
-              <span className="h-2 w-2 rounded-full bg-white mr-2"></span>
-              Transform your procurement process today
-            </div>
-            <h1 className="text-4xl md:text-6xl font-bold tracking-tight text-white">
-              The all-in-one
-              <span className="relative">
-                <span className="relative z-10 text-white">
-                  {' '}procurement platform
+            <div className="animate-fade-in-up">
+              <h1 className="text-4xl md:text-6xl font-display tracking-tight text-white mb-4">
+                The all-in-one
+                <span className="relative inline-block ml-3">
+                  <span className="text-white">
+                    procurement platform
+                  </span>
+                  <div className="absolute -bottom-2 left-0 w-full h-1 bg-white rounded-full animate-scale-x"></div>
                 </span>
-                <span className="absolute bottom-2 left-0 w-full h-4 bg-gray-300 -z-10 opacity-30"></span>
-              </span>
-            </h1>
-            <p className="text-xl text-gray-300 max-w-2xl mx-auto">
-              Automate and optimize your procurement workflow with our AI-powered platform. 
-              Save time, reduce costs, and gain complete control over your spending.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button size="lg" asChild className="text-lg bg-white text-black hover:bg-gray-100 transition-all duration-300 hover:scale-105 hover:shadow-xl transform font-semibold">
+              </h1>
+            </div>
+            <div className="animate-fade-in-up" style={{animationDelay: '0.3s'}}>
+              <p className="text-xl font-body text-gray-300 max-w-2xl mx-auto">
+                Automate your procurement workflow with our AI-powered platform. 
+                <span className="text-white font-semibold">Save time, reduce costs</span>, and gain complete control.
+              </p>
+            </div>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center pt-6 animate-fade-in-up" style={{animationDelay: '0.6s'}}>
+              <Button size="lg" asChild className="bg-white text-black hover:bg-gray-100 font-semibold transform hover:scale-105 transition-all duration-300 shadow-lg hover:shadow-xl">
                 <Link to="/register">
                   Start Free Trial
-                  <ArrowRight className="ml-2 h-5 w-5 transition-transform duration-300 group-hover:translate-x-1" />
+                  <ArrowRight className="ml-2 h-5 w-5 animate-bounce-x" />
                 </Link>
               </Button>
-              <Button size="lg" variant="outline" asChild className="text-lg border-white text-white hover:bg-white hover:text-black transition-all duration-300 hover:scale-105">
-                <Link to="/login">Sign In to Your Account</Link>
+              <Button size="lg" variant="outline" asChild className="border-2 border-white text-white hover:bg-white hover:text-black backdrop-blur-sm font-semibold transform hover:scale-105 transition-all duration-300">
+                <Link to="/login">Sign In</Link>
               </Button>
             </div>
           </div>
@@ -233,14 +234,14 @@ export default function Landing() {
             {stats.map((stat, index) => {
               const Icon = stat.icon;
               return (
-                <div key={`stat-${stat.label}-${index}`} className="bg-white p-6 rounded-xl shadow-sm hover:shadow-md transition-shadow border border-gray-200">
-                  <div className="flex items-center mb-2">
-                    <div className="p-2 rounded-lg bg-black text-white mr-3">
-                      <Icon className="h-5 w-5" />
+                <div key={`stat-${stat.label}-${index}`} className="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl border border-gray-200 transform hover:scale-105 transition-all duration-300 animate-fade-in-up" style={{animationDelay: `${index * 0.2}s`}}>
+                  <div className="flex items-center mb-3">
+                    <div className="p-3 rounded-full bg-black text-white mr-4 animate-pulse">
+                      <Icon className="h-6 w-6" />
                     </div>
                     <span className="text-3xl font-bold text-black">{stat.value}</span>
                   </div>
-                  <p className="text-sm text-gray-600">{stat.label}</p>
+                  <p className="text-sm text-gray-600 font-medium">{stat.label}</p>
                 </div>
               );
             })}
@@ -249,29 +250,28 @@ export default function Landing() {
       </section>
 
       {/* Features Section */}
-      <section id="features" className="py-20 bg-white">
+      <section id="features" className="py-16 bg-white">
         <div className="container mx-auto px-4">
-          <div className="text-center max-w-3xl mx-auto mb-16">
-            <span className="inline-block px-3 py-1 text-sm font-medium text-white bg-black rounded-full mb-4 border border-gray-300">
-              Features
-            </span>
-            <h2 className="text-3xl md:text-4xl font-bold text-black mb-4">Everything you need for seamless procurement</h2>
-            <p className="text-lg text-gray-600">Streamline your procurement process with our comprehensive suite of features</p>
+          <div className="text-center max-w-3xl mx-auto mb-12 animate-fade-in-up">
+            <h2 className="text-3xl md:text-4xl font-display text-black mb-4">
+              Powerful Features for 
+              <span className="text-gray-600">
+                Modern Procurement
+              </span>
+            </h2>
+            <p className="text-lg font-body text-gray-600">Essential tools that transform your procurement workflow</p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {features.map((feature, index) => {
+            {features.slice(0, 6).map((feature, index) => {
               const Icon = feature.icon;
               return (
-                <div key={`feature-${feature.title}-${index}`} className="group">
-                  <div className="h-full p-6 rounded-xl border border-gray-200 hover:border-black hover:shadow-lg transition-all duration-300 hover:-translate-y-1 bg-white">
-                    <div className="w-12 h-12 rounded-lg bg-black flex items-center justify-center mb-4">
-                      <Icon className="w-6 h-6 text-white" />
-                    </div>
-                    <h3 className="text-xl font-semibold text-black mb-2">{feature.title}</h3>
-                    <p className="text-gray-600">{feature.description}</p>
-
+                <div key={`feature-${feature.title}-${index}`} className="group p-6 rounded-xl border border-gray-200 hover:border-black bg-white hover:bg-gray-50 transform hover:scale-105 transition-all duration-300 animate-fade-in-up" style={{animationDelay: `${index * 0.1}s`}}>
+                  <div className="w-12 h-12 rounded-lg bg-black flex items-center justify-center mb-4 group-hover:animate-bounce">
+                    <Icon className="w-6 h-6 text-white" />
                   </div>
+                  <h3 className="text-xl font-heading text-black mb-3 group-hover:text-gray-800 transition-colors">{feature.title}</h3>
+                  <p className="font-body text-gray-600 group-hover:text-gray-700">{feature.description}</p>
                 </div>
               );
             })}
@@ -280,23 +280,26 @@ export default function Landing() {
       </section>
 
       {/* Benefits Section */}
-      <section className="py-20 bg-gray-50">
+      <section className="py-16 bg-gray-50">
         <div className="container mx-auto px-4">
           <div className="max-w-4xl mx-auto">
-            <div className="text-center mb-12">
-              <h2 className="text-3xl md:text-5xl font-bold mb-4 text-black">
-                Why Choose Procure2Pay?
+            <div className="text-center mb-10 animate-fade-in-up">
+              <h2 className="text-3xl md:text-4xl font-display mb-4 text-black">
+                Why Choose 
+                <span className="text-gray-600">
+                  Procure2Pay?
+                </span>
               </h2>
-              <p className="text-xl text-gray-600">
-                Streamline your procurement process with modern technology
-              </p>
+              <p className="text-lg font-body text-gray-600">Transform your procurement with cutting-edge technology</p>
             </div>
             
-            <div className="grid md:grid-cols-2 gap-4">
-              {benefits.map((benefit, index) => (
-                <div key={`benefit-${benefit.slice(0, 20)}-${index}`} className="flex items-start gap-3 p-4 rounded-lg bg-white border border-gray-200 transition-all duration-300 hover:scale-105 hover:shadow-lg transform hover:border-black">
-                  <CheckCircle2 className="h-6 w-6 text-black shrink-0 mt-0.5 transition-transform duration-300 hover:scale-110" />
-                  <span className="text-lg text-black">{benefit}</span>
+            <div className="grid md:grid-cols-2 gap-6">
+              {benefits.slice(0, 6).map((benefit, index) => (
+                <div key={`benefit-${benefit.slice(0, 20)}-${index}`} className="flex items-start gap-4 p-6 rounded-xl bg-white border border-gray-200 hover:border-black hover:bg-gray-50 transform hover:scale-105 transition-all duration-300 animate-fade-in-up" style={{animationDelay: `${index * 0.1}s`}}>
+                  <div className="p-2 rounded-full bg-black animate-pulse">
+                    <CheckCircle2 className="h-5 w-5 text-white" />
+                  </div>
+                  <span className="font-body text-gray-800 font-medium">{benefit}</span>
                 </div>
               ))}
             </div>
@@ -304,63 +307,53 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* CTA Cards Section */}
-      <section className="py-16 bg-white">
-        <div className="container mx-auto px-4">
-          <div className="grid md:grid-cols-2 gap-6 max-w-5xl mx-auto">
-            {ctaCards.map((card, index) => {
-              const Icon = card.icon;
-              return (
-                <div key={`cta-${card.title}-${index}`} className="bg-gray-50 rounded-xl p-6 shadow-sm hover:shadow-md transition-shadow border border-gray-200 hover:border-black">
-                  <h3 className="text-xl font-semibold text-black mb-2">{card.title}</h3>
-                  <p className="text-gray-600 mb-6">{card.description}</p>
-                  <Button 
-                    variant={card.variant as "default" | "outline"} 
-                    className="w-full sm:w-auto"
-                    asChild
-                  >
-                    <Link to={card.buttonText === 'Book a Demo' ? '/demo' : '/register'} className="flex items-center justify-center">
-                      {card.buttonText} <Icon className="ml-2 h-4 w-4" />
-                    </Link>
-                  </Button>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      </section>
-
       {/* Final CTA Section */}
-      <section className="py-20 bg-black">
-        <div className="container mx-auto px-4 text-center">
-          <h2 className="text-3xl md:text-4xl font-bold text-white mb-6">Ready to transform your procurement process?</h2>
-          <p className="text-xl text-gray-300 max-w-2xl mx-auto mb-8">
-            Experience the future of procurement management with our innovative platform.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button 
-              variant="secondary" 
-              size="lg" 
-              className="bg-white text-black hover:bg-gray-100 h-12 px-8 text-base font-semibold shadow-lg hover:shadow-xl transition-all duration-200"
-              asChild
-            >
-              <Link to="/register">
-                Start Free Trial <ArrowRight className="ml-2 h-4 w-4" />
-              </Link>
-            </Button>
+      <section className="py-20 bg-black relative overflow-hidden">
+        <div className="absolute inset-0">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_50%,rgba(255,255,255,0.1),transparent_50%)] animate-pulse"></div>
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_80%_50%,rgba(255,255,255,0.05),transparent_50%)] animate-pulse" style={{animationDelay: '1.5s'}}></div>
+        </div>
+        <div className="container mx-auto px-4 text-center relative">
+          <div className="animate-fade-in-up">
+            <h2 className="text-3xl md:text-5xl font-display text-white mb-6">
+              Ready to 
+              <span className="text-gray-300">
+                transform
+              </span>
+              {' '}your procurement?
+            </h2>
+            <p className="text-xl font-body text-gray-300 max-w-2xl mx-auto mb-10">
+              Join thousands of companies already using our platform to streamline their procurement process.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <Button 
+                size="lg" 
+                className="bg-white text-black hover:bg-gray-100 font-semibold px-8 py-4 text-lg transform hover:scale-105 transition-all duration-300 shadow-lg hover:shadow-xl animate-bounce-slow"
+                asChild
+              >
+                <Link to="/register">
+                  Start Free Trial <ArrowRight className="ml-2 h-5 w-5 animate-bounce-x" />
+                </Link>
+              </Button>
+              <Button 
+                size="lg" 
+                variant="outline"
+                className="border-2 border-white text-white hover:bg-white hover:text-black backdrop-blur-sm font-semibold px-8 py-4 text-lg transform hover:scale-105 transition-all duration-300"
+                asChild
+              >
+                <Link to="/login">Sign In</Link>
+              </Button>
+            </div>
           </div>
-         
         </div>
       </section>
 
       {/* Footer */}
-      <footer className="border-t border-gray-200 py-12 bg-white">
+      <footer className="border-t border-gray-200 py-6 bg-white">
         <div className="container mx-auto px-4">
-          <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-            <div className="transform transition-transform duration-300 hover:scale-105">
-              <LogoWithText size="sm" />
-            </div>
-            <p className="text-sm text-gray-600 hover:text-black transition-colors duration-300">
+          <div className="flex flex-col md:flex-row justify-between items-center gap-2">
+            <LogoWithText size="sm" />
+            <p className="text-xs text-gray-600">
               © 2025 Procure2Pay. All rights reserved.
             </p>
           </div>

@@ -1,19 +1,22 @@
 # Environment files with secrets
 .env
-.env.local
-.env.production
-.env.render
+.env.*
 backend/.env
-backend/.env.local
-backend/.env.production
-backend/.env.render
+backend/.env.*
 frontend/.env
-frontend/.env.local
+frontend/.env.*
 
-# API Keys and secrets
+# API Keys and secrets (CRITICAL - NEVER COMMIT)
 **/OPENAI_API_KEY*
 **/*api*key*
 **/*secret*
+**/*token*
+**/SECRET_KEY*
+**/DATABASE_URL*
+**/REDIS_URL*
+
+# Fly.io secrets
+backend/.env.fly
 
 # Database
 *.db
@@ -27,11 +30,14 @@ logs/
 node_modules/
 __pycache__/
 *.pyc
+venv/
+env/
 
 # Build outputs
 dist/
 build/
 staticfiles/
+media/
 
 # IDE
 .vscode/

@@ -173,20 +173,44 @@ class PurchaseRequestViewSet(ModelViewSet):
         
         response = super().update(request, *args, **kwargs)
         
-        # Store file content in database after update
-        if response.status_code == 200 and 'proforma' in request.FILES:
+        # Store file content and update items after update
+        if response.status_code == 200:
             try:
-                uploaded_file = request.FILES['proforma']
-                
                 # Store file content in database
-                uploaded_file.seek(0)
-                instance.proforma_content = uploaded_file.read()
-                instance.proforma_filename = uploaded_file.name
-                instance.proforma_content_type = uploaded_file.content_type or 'application/octet-stream'
+                if 'proforma' in request.FILES:
+                    uploaded_file = request.FILES['proforma']
+                    uploaded_file.seek(0)
+                    instance.proforma_content = uploaded_file.read()
+                    instance.proforma_filename = uploaded_file.name
+                    instance.proforma_content_type = uploaded_file.content_type or 'application/octet-stream'
+                
+                # Update RequestItem objects from AI-extracted items
+                if 'proforma' in request.FILES and hasattr(instance, 'proforma_data') and instance.proforma_data:
+                    # Clear existing items
+                    instance.items.all().delete()
+                    
+                    # Create new items from AI extraction
+                    items_data = instance.proforma_data.get('items', [])
+                    for item_data in items_data:
+                        try:
+                            RequestItem.objects.create(
+                                request=instance,
+                                name=item_data.get('name', 'Unknown Item'),
+                                quantity=int(item_data.get('quantity', 1)),
+                                unit_price=float(str(item_data.get('unit_price', '0')).replace(',', ''))
+                            )
+                        except (ValueError, TypeError) as e:
+                            print(f"Failed to create item {item_data}: {e}")
+                            continue
+                
                 instance.save()
                 
+                # Update response with items
+                updated_serializer = self.get_serializer(instance)
+                response.data = updated_serializer.data
+                
             except Exception as e:
-                print(f"Failed to store proforma content: {e}")
+                print(f"Failed to update proforma data: {e}")
         
         return response
     
@@ -209,24 +233,120 @@ class PurchaseRequestViewSet(ModelViewSet):
         
         response = super().create(request, *args, **kwargs)
         
-        # Store file content in database after creation
-        if response.status_code == 201 and 'proforma' in request.FILES:
+        # Store file content and create items after creation
+        if response.status_code == 201:
             try:
                 purchase_request = PurchaseRequest.objects.get(id=response.data['id'])
-                uploaded_file = request.FILES['proforma']
                 
                 # Store file content in database
-                uploaded_file.seek(0)
-                purchase_request.proforma_content = uploaded_file.read()
-                purchase_request.proforma_filename = uploaded_file.name
-                purchase_request.proforma_content_type = uploaded_file.content_type or 'application/octet-stream'
+                if 'proforma' in request.FILES:
+                    uploaded_file = request.FILES['proforma']
+                    uploaded_file.seek(0)
+                    purchase_request.proforma_content = uploaded_file.read()
+                    purchase_request.proforma_filename = uploaded_file.name
+                    purchase_request.proforma_content_type = uploaded_file.content_type or 'application/octet-stream'
+                
+                # Create RequestItem objects from AI-extracted items
+                if hasattr(purchase_request, 'proforma_data') and purchase_request.proforma_data:
+                    items_data = purchase_request.proforma_data.get('items', [])
+                    for item_data in items_data:
+                        try:
+                            RequestItem.objects.create(
+                                request=purchase_request,
+                                name=item_data.get('name', 'Unknown Item'),
+                                quantity=int(item_data.get('quantity', 1)),
+                                unit_price=float(str(item_data.get('unit_price', '0')).replace(',', ''))
+                            )
+                        except (ValueError, TypeError) as e:
+                            print(f"Failed to create item {item_data}: {e}")
+                            continue
+                
                 purchase_request.save()
                 
+                # Update response with items
+                updated_serializer = self.get_serializer(purchase_request)
+                response.data = updated_serializer.data
+                
             except Exception as e:
-                print(f"Failed to store proforma content: {e}")
+                print(f"Failed to process proforma data: {e}")
         
         return response
     
+    @extend_schema(
+        description="Process uploaded proforma document to extract items",
+        request=None,
+        responses={200: None, 400: None, 403: None, 500: None},
+        tags=['Purchase Requests']
+    )
+    @action(detail=True, methods=['post'], url_path='process-proforma')
+    def process_proforma(self, request, pk=None):
+        purchase_request = self.get_object()
+        
+        # Allow staff and finance to process proforma
+        if request.user.role not in ['staff', 'finance'] and request.user != purchase_request.created_by:
+            return Response({'error': 'Permission denied'}, 
+                          status=status.HTTP_403_FORBIDDEN)
+        
+        # Check if proforma exists
+        if not purchase_request.proforma_content and not purchase_request.proforma:
+            return Response({'error': 'No proforma document found'}, 
+                          status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            processor = DocumentProcessor()
+            
+            # Process from database content or file
+            if purchase_request.proforma_content:
+                # Create temporary file from database content
+                import tempfile
+                with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as temp_file:
+                    temp_file.write(purchase_request.proforma_content)
+                    temp_file.flush()
+                    proforma_data = processor.process_proforma(temp_file.name)
+                    os.unlink(temp_file.name)
+            elif purchase_request.proforma:
+                proforma_data = processor.process_proforma(purchase_request.proforma.path)
+            else:
+                return Response({'error': 'No proforma content available'}, 
+                              status=status.HTTP_400_BAD_REQUEST)
+            
+            # Update proforma data
+            purchase_request.proforma_data = proforma_data
+            
+            # Clear existing items and create new ones
+            purchase_request.items.all().delete()
+            
+            items_data = proforma_data.get('items', [])
+            created_items = []
+            
+            for item_data in items_data:
+                try:
+                    item = RequestItem.objects.create(
+                        request=purchase_request,
+                        name=item_data.get('name', 'Unknown Item'),
+                        quantity=int(item_data.get('quantity', 1)),
+                        unit_price=float(str(item_data.get('unit_price', '0')).replace(',', ''))
+                    )
+                    created_items.append(item)
+                except (ValueError, TypeError) as e:
+                    print(f"Failed to create item {item_data}: {e}")
+                    continue
+            
+            purchase_request.save()
+            
+            return Response({
+                'message': 'Proforma processed successfully',
+                'items_created': len(created_items),
+                'processing_method': "AI" if processor.client else "Basic",
+                'confidence': proforma_data.get('confidence', 0.5),
+                'vendor': proforma_data.get('vendor', 'Unknown'),
+                'total_amount': proforma_data.get('total_amount', '0'),
+                'request': self.get_serializer(purchase_request).data
+            })
+            
+        except Exception as e:
+            return Response({'error': f'Proforma processing failed: {str(e)}'}, 
+                          status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     @extend_schema(
         description="Submit receipt for approved request (Staff only)",
         request=None,
@@ -281,6 +401,89 @@ class PurchaseRequestViewSet(ModelViewSet):
             return Response({'error': f'Receipt processing failed: {str(e)}'}, 
                           status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     
+    @extend_schema(
+        description="Get dashboard statistics",
+        responses={200: None},
+        tags=['Dashboard']
+    )
+    @action(detail=False, methods=['get'], url_path='dashboard-stats')
+    def dashboard_stats(self, request):
+        from django.db.models import Count, Sum
+        from django.utils import timezone
+        from datetime import datetime, timedelta
+        
+        user = request.user
+        now = timezone.now()
+        current_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        last_month = (current_month - timedelta(days=1)).replace(day=1)
+        
+        # Base queryset based on user role
+        if user.role == 'staff':
+            base_qs = PurchaseRequest.objects.filter(created_by=user)
+        else:
+            base_qs = PurchaseRequest.objects.all()
+        
+        # Current month stats
+        current_month_qs = base_qs.filter(created_at__gte=current_month)
+        current_month_count = current_month_qs.count()
+        current_month_amount = current_month_qs.aggregate(total=Sum('amount'))['total'] or 0
+        
+        # Last month stats
+        last_month_qs = base_qs.filter(created_at__gte=last_month, created_at__lt=current_month)
+        last_month_count = last_month_qs.count()
+        last_month_amount = last_month_qs.aggregate(total=Sum('amount'))['total'] or 0
+        
+        # Calculate growth
+        count_growth = 0
+        amount_growth = 0
+        
+        if last_month_count > 0:
+            count_growth = ((current_month_count - last_month_count) / last_month_count) * 100
+        elif current_month_count > 0:
+            count_growth = 100
+            
+        if last_month_amount > 0:
+            amount_growth = ((current_month_amount - last_month_amount) / last_month_amount) * 100
+        elif current_month_amount > 0:
+            amount_growth = 100
+        
+        # Status counts
+        status_counts = base_qs.values('status').annotate(count=Count('id'))
+        status_stats = {item['status']: item['count'] for item in status_counts}
+        
+        # Recent requests
+        recent_requests = base_qs.order_by('-created_at')[:5]
+        recent_data = [{
+            'id': req.id,
+            'title': req.title,
+            'amount': str(req.amount),
+            'status': req.status,
+            'created_at': req.created_at.isoformat()
+        } for req in recent_requests]
+        
+        return Response({
+            'current_month': {
+                'requests_count': current_month_count,
+                'total_amount': str(current_month_amount),
+                'month_name': now.strftime('%B')
+            },
+            'last_month': {
+                'requests_count': last_month_count,
+                'total_amount': str(last_month_amount),
+                'month_name': (now - timedelta(days=30)).strftime('%B')
+            },
+            'growth': {
+                'requests_growth': round(count_growth, 1),
+                'amount_growth': round(amount_growth, 1)
+            },
+            'status_counts': {
+                'pending': status_stats.get('pending', 0),
+                'approved': status_stats.get('approved', 0),
+                'rejected': status_stats.get('rejected', 0)
+            },
+            'recent_requests': recent_data,
+            'user_role': user.role
+        })
     @extend_schema(
         description="Download document file (Finance users only)",
         responses={200: None, 403: None, 404: None},
