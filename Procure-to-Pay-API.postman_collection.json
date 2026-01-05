@@ -7,7 +7,7 @@
 	"variable": [
 		{
 			"key": "baseUrl",
-			"value": "http://localhost:8000",
+			"value": "https://procure-to-pay-backend.fly.dev",
 			"type": "string"
 		},
 		{
@@ -270,6 +270,34 @@
 							"raw": "{{baseUrl}}/api/requests/{{requestId}}/submit-receipt/",
 							"host": ["{{baseUrl}}"],
 							"path": ["api", "requests", "{{requestId}}", "submit-receipt", ""]
+						}
+					}
+				},
+				{
+					"name": "Process Existing Proforma",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/requests/{{requestId}}/process-proforma/",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "requests", "{{requestId}}", "process-proforma", ""]
+						}
+					}
+				},
+				{
+					"name": "Get Dashboard Statistics",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{baseUrl}}/api/requests/dashboard-stats/",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "requests", "dashboard-stats", ""]
 						}
 					}
 				}

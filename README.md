@@ -66,7 +66,7 @@ A comprehensive **Procure-to-Pay** system with Django REST API backend and React
 </td>
 <td>
 
-- Render PostgreSQL
+- Neon PostgreSQL
 - Redis
 - File Storage
 
@@ -99,25 +99,33 @@ A comprehensive **Procure-to-Pay** system with Django REST API backend and React
    - Create a new API key
    - Copy the key for the next step
 
-3. **Configure Environment**
+3. **Configure Environment Securely**
    ```bash
-   # Create .env file (NOT committed to git)
+   # Run secure setup script
+   ./setup-env.sh
+   
+   # Or manually create environment files
    cp backend/.env.example backend/.env
-   # Edit backend/.env and add your OpenAI API key
-   OPENAI_API_KEY=sk-your-actual-api-key-here
+   cp .env.docker.template .env
+   
+   # Edit files and add your actual API keys
+   # NEVER commit .env files to git!
    ```
 
 4. **Choose your setup method:**
 
-   **Development Setup (Uses Render PostgreSQL)**
+   **Development Setup (Uses Neon PostgreSQL)**
    ```bash
-   # Make sure to set your OpenAI API key in docker-compose.yml first
+   # Make sure to create .env file first with your API keys
+   cp .env.docker.template .env
+   # Edit .env with your actual keys
    docker-compose up --build
    ```
 
    **Production Setup**
    ```bash
-   # Make sure to set your OpenAI API key in docker-compose.prod.yml first
+   # Use Fly.io secrets for production
+   fly secrets set OPENAI_API_KEY=sk-your-key
    docker-compose -f docker-compose.prod.yml up --build
    ```
 
@@ -128,13 +136,30 @@ A comprehensive **Procure-to-Pay** system with Django REST API backend and React
    - 📖 **ReDoc**: http://localhost:8000/api/redoc/
    - 🔗 **API Schema**: http://localhost:8000/api/schema/
 
+## 🔐 Security & API Keys
+
+### ⚠️ **CRITICAL: Never Commit API Keys**
+- All `.env*` files are in `.gitignore`
+- Use `./setup-env.sh` for secure environment setup
+- Get OpenAI API key: [https://platform.openai.com/api-keys](https://platform.openai.com/api-keys)
+- Use Fly.io secrets for production: `fly secrets set OPENAI_API_KEY=sk-your-key`
+
+### 🔍 **Security Checklist:**
+- ✅ API keys in environment variables only
+- ✅ .env files never committed to git
+- ✅ Different keys for development/production
+- ✅ Regular key rotation
+- ✅ Secure key storage (Fly.io secrets)
+
+**📖 Complete Security Guide**: [SECURITY_GUIDE.md](SECURITY_GUIDE.md)
+
 ## 🌐 Live Demo
 
 **Frontend Application**: https://procure-to-pay-system.vercel.app/  
-**Backend API**: https://procure-to-pay-system-xnwp.onrender.com/  
-**Swagger UI**: https://procure-to-pay-system-xnwp.onrender.com/api/docs/  
-**ReDoc**: https://procure-to-pay-system-xnwp.onrender.com/api/redoc/  
-**Health Check**: https://procure-to-pay-system-xnwp.onrender.com/health/
+**Backend API**: https://procure-to-pay-backend.fly.dev/  
+**Swagger UI**: https://procure-to-pay-backend.fly.dev/api/docs/  
+**ReDoc**: https://procure-to-pay-backend.fly.dev/api/redoc/  
+**Health Check**: https://procure-to-pay-backend.fly.dev/health/
 
 ## 🎨 UI/UX Features
 
@@ -180,6 +205,8 @@ python3 test_api.py
 | `PATCH` | `/api/requests/{id}/approve/` | Approve request | Approvers |
 | `PATCH` | `/api/requests/{id}/reject/` | Reject request | Approvers |
 | `POST` | `/api/requests/{id}/submit-receipt/` | Submit receipt | Staff |
+| `POST` | `/api/requests/{id}/process-proforma/` | Process existing proforma | Staff/Finance |
+| `GET` | `/api/requests/dashboard-stats/` | Get dashboard statistics | Authenticated |
 | `POST` | `/api/documents/process/` | Process document | Authenticated |
 
 **📖 Complete API Documentation**: [API_DOCUMENTATION.md](API_DOCUMENTATION.md)  
@@ -317,7 +344,7 @@ curl -X POST http://localhost:8000/api/auth/login/ \
   -H "Content-Type: application/json" \
   -d '{"username": "staff1", "password": "password123"}'
 
-# Manual testing with curl (Production)
+# Manual testing with curl (Production - Fly.io)
 curl -X POST https://procure-to-pay-backend.fly.dev/api/auth/login/ \
   -H "Content-Type: application/json" \
   -d '{"username": "staff1", "password": "password123"}'
@@ -344,9 +371,10 @@ python3 VALIDATE_BUILD.py
 ```
 
 ### Cloud Platforms
+- ☁️ **Fly.io** - Global edge deployment (Current)
+- 🌊 **Neon** - Serverless PostgreSQL database (Current)
 - ☁️ **AWS EC2** - Full control VPS
 - 🌐 **Render** - Easy deployment
-- ✈️ **Fly.io** - Global edge deployment
 - 🌊 **DigitalOcean** - Developer-friendly VPS
 - 🐳 **Any Docker-compatible platform**
 
@@ -382,13 +410,16 @@ python3 VALIDATE_BUILD.py
 - **JSON Schema**: http://localhost:8000/swagger.json - OpenAPI specification
 
 ### Production
-- **Swagger UI**: https://procure-to-pay-system-xnwp.onrender.com/api/docs/ - Interactive API documentation
-- **ReDoc**: https://procure-to-pay-system-xnwp.onrender.com/api/redoc/ - Clean API documentation
-- **JSON Schema**: https://procure-to-pay-system-xnwp.onrender.com/api/schema/ - OpenAPI specification
+- **Swagger UI**: https://procure-to-pay-backend.fly.dev/api/docs/ - Interactive API documentation
+- **ReDoc**: https://procure-to-pay-backend.fly.dev/api/redoc/ - Clean API documentation
+- **JSON Schema**: https://procure-to-pay-backend.fly.dev/api/schema/ - OpenAPI specification
 
 ## 🔧 Recent Updates
 
 ### ✅ **Latest Improvements**
+- **Enhanced Dashboard**: Real-time statistics with calculated growth percentages
+- **Process Existing Proforma**: New endpoint to process already uploaded documents
+- **Automatic Item Creation**: AI extracts items and creates RequestItem objects automatically
 - **Enhanced UI**: Clean black and white theme across all pages
 - **Fixed Approval Buttons**: Visible red reject and green approve buttons for both Level 1 & 2 approvers
 - **Approval Statistics**: Individual approval tracking for approvers (shows their personal approval/rejection counts)
@@ -397,7 +428,8 @@ python3 VALIDATE_BUILD.py
 - **Modal Dialogs**: Proper confirmation dialogs for approve/reject actions
 - **Form Validation**: Real-time validation with proper error handling
 - **Responsive Design**: Mobile-friendly interface with smooth animations
-- **Database Migration**: Successfully migrated from Supabase to Render PostgreSQL
+- **Database Migration**: Successfully migrated from Render PostgreSQL to Neon PostgreSQL
+- **Backend Deployment**: Migrated from Render to Fly.io for better performance
 - **API Documentation**: Updated to drf-spectacular for modern OpenAPI 3.0 support
 - **Role-Based Actions**: Different action buttons based on user roles (View vs Export)
 

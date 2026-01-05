@@ -2,9 +2,16 @@
 .env
 .env.local
 .env.production
+<<<<<<< Updated upstream
 .env.render
 .env.docker
 *.env
+=======
+.env.fly
+.env.docker
+*.env
+.
+>>>>>>> Stashed changes
 
 # API Keys and secrets - NEVER COMMIT THESE
 **/OPENAI_API_KEY*

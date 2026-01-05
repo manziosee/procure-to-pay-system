@@ -199,21 +199,56 @@ class DocumentProcessor:
                 messages=[
                     {
                         "role": "system", 
-                        "content": """You are a document processing AI. Extract structured data from proforma invoices.
-                        Return ONLY valid JSON with these exact fields:
+                        "content": """You are an expert document processing AI specialized in proforma invoices and purchase orders.
+                        
+                        CRITICAL INSTRUCTIONS:
+                        1. ITEMS: Look for sections labeled "Items", "Products", "Services", "Description", "Line Items", or similar
+                        2. IDENTIFY REAL PRODUCTS: Extract only actual goods/services being sold (chairs, desks, software, etc.)
+                        3. EXCLUDE NON-ITEMS: Never include subtotals, taxes, totals, invoice numbers, headers, or calculations
+                        4. TOTAL AMOUNT: Find the FINAL amount due - usually labeled "Total", "Grand Total", "Amount Due", or "Final Total"
+                        5. CURRENCY: Handle RWF, USD, EUR, and other currencies properly
+                        6. QUANTITIES: Extract realistic quantities (1-1000 range)
+                        7. UNIT PRICES: Extract individual item prices, not line totals
+                        
+                        ITEM IDENTIFICATION PATTERNS:
+                        - Look for: "1. Office Chair", "Item: Desk", "Product: Software License"
+                        - Table format: "Description | Qty | Unit Price | Total"
+                        - List format: "- Office Chair (2 units @ 75,000 each)"
+                        
+                        TOTAL IDENTIFICATION:
+                        - Prioritize: "Total: RWF 407,100" over "Subtotal: RWF 345,000"
+                        - Look for: "Grand Total", "Amount Due", "Final Amount", "Total Amount"
+                        - Include tax in final total if present
+                        
+                        Return ONLY valid JSON:
                         {
-                            "vendor": "company name",
-                            "total_amount": "numeric string",
-                            "items": [{"name": "item name", "quantity": number, "unit_price": "numeric string"}],
-                            "terms": "payment terms",
+                            "vendor": "company name from header",
+                            "total_amount": "final total as number string",
+                            "items": [
+                                {
+                                    "name": "actual product/service name",
+                                    "quantity": number,
+                                    "unit_price": "price per unit as string"
+                                }
+                            ],
+                            "terms": "payment terms if found",
                             "confidence": 0.95
                         }
-                        If you cannot extract data, return basic structure with empty/default values."""
+                        
+                        EXAMPLE CORRECT EXTRACTION:
+                        Input: "Items: 1. Office Chair (2 × 75,000), 2. Desk Lamp (5 × 15,000), Subtotal: 225,000, Tax: 40,500, Total: 265,500"
+                        Output: {
+                            "items": [
+                                {"name": "Office Chair", "quantity": 2, "unit_price": "75000"},
+                                {"name": "Desk Lamp", "quantity": 5, "unit_price": "15000"}
+                            ],
+                            "total_amount": "265500"
+                        }"""
                     },
-                    {"role": "user", "content": f"Extract data from this proforma invoice:\n\n{text[:2000]}"}
+                    {"role": "user", "content": f"Extract data from this proforma invoice. Focus on finding the items section and final total:\n\n{text[:3000]}"}
                 ],
                 temperature=0.1,
-                max_tokens=1000
+                max_tokens=1500
             )
             
             content = response.choices[0].message.content.strip()
@@ -227,36 +262,116 @@ class DocumentProcessor:
             # Parse JSON
             extracted_data = json.loads(content)
             
-            # Validate required fields
+            # Validate and clean extracted data
             if not isinstance(extracted_data, dict):
                 raise ValueError("Invalid JSON structure")
+            
+            # Enhanced item filtering and validation
+            if 'items' in extracted_data:
+                filtered_items = []
+                for item in extracted_data['items']:
+                    if self._is_valid_item(item):
+                        filtered_items.append(self._clean_item(item))
+                
+                extracted_data['items'] = filtered_items
+            
+            # Validate and clean total amount
+            if 'total_amount' in extracted_data:
+                extracted_data['total_amount'] = self._clean_amount(extracted_data['total_amount'])
             
             # Ensure required fields exist
             extracted_data.setdefault('vendor', 'Unknown Vendor')
             extracted_data.setdefault('total_amount', '0.00')
             extracted_data.setdefault('items', [])
             extracted_data.setdefault('terms', 'Net 30')
-            extracted_data.setdefault('confidence', 0.8)
+            extracted_data.setdefault('confidence', 0.9)
             
             return extracted_data
             
         except Exception as e:
             print(f"AI extraction failed: {e}")
-            # Return basic extraction with fallback
-            basic_data = self._basic_extract_proforma(text)
-            basic_data['confidence'] = 0.3
-            basic_data['processing_method'] = 'basic_fallback'
+            # Return enhanced basic extraction with fallback
+            basic_data = self._enhanced_basic_extract_proforma(text)
+            basic_data['confidence'] = 0.4
+            basic_data['processing_method'] = 'enhanced_basic_fallback'
             return basic_data
     
-    def _basic_extract_proforma(self, text):
-        items = self._extract_items(text)
+    def _is_valid_item(self, item):
+        """Enhanced validation for extracted items"""
+        if not isinstance(item, dict):
+            return False
+        
+        name = item.get('name', '').strip()
+        quantity = item.get('quantity', 0)
+        unit_price = item.get('unit_price', '0')
+        
+        # Check if name exists and has letters
+        if not name or len(name) < 2 or not re.search(r'[a-zA-Z]', name):
+            return False
+        
+        # Exclude non-item keywords
+        exclude_keywords = [
+            'subtotal', 'total', 'tax', 'vat', 'discount', 'shipping', 
+            'handling', 'fee', 'charge', 'due', 'balance', 'amount',
+            'grand', 'final', 'sum', 'bill', 'invoice', 'pro-', 'pro ',
+            'receipt', 'number', '#', 'ref', 'reference', 'id', 'code'
+        ]
+        
+        if any(keyword in name.lower() for keyword in exclude_keywords):
+            return False
+        
+        # Check quantity range
+        try:
+            qty = int(quantity)
+            if qty <= 0 or qty > 10000:
+                return False
+        except (ValueError, TypeError):
+            return False
+        
+        # Check unit price
+        try:
+            price = float(str(unit_price).replace(',', '').replace(' ', ''))
+            if price <= 0 or price > 100000000:
+                return False
+        except (ValueError, TypeError):
+            return False
+        
+        return True
+    
+    def _clean_item(self, item):
+        """Clean and standardize item data"""
+        return {
+            'name': item.get('name', '').strip(),
+            'quantity': int(item.get('quantity', 1)),
+            'unit_price': str(item.get('unit_price', '0')).replace(',', '').replace(' ', '')
+        }
+    
+    def _clean_amount(self, amount):
+        """Clean and standardize amount string"""
+        if not amount:
+            return '0.00'
+        
+        # Remove currency symbols and clean
+        cleaned = str(amount).replace(',', '').replace(' ', '').replace('RWF', '').replace('$', '').replace('€', '')
+        
+        try:
+            float(cleaned)
+            return cleaned
+        except ValueError:
+            return '0.00'
+    
+    def _enhanced_basic_extract_proforma(self, text):
+        """Enhanced basic extraction with better item and total detection"""
+        items = self._enhanced_extract_items(text)
+        total = self._enhanced_extract_amount(text)
+        
         return {
             'vendor': self._extract_vendor(text),
-            'total_amount': self._extract_amount(text),
+            'total_amount': total,
             'items': items,
             'terms': self._extract_terms(text),
-            'confidence': 0.6,
-            'processing_method': 'basic_extraction'
+            'confidence': 0.7,
+            'processing_method': 'enhanced_basic_extraction'
         }
     
     def _extract_receipt_data(self, text):
@@ -310,51 +425,194 @@ class DocumentProcessor:
                     return vendor
         return "Unknown Vendor"
     
-    def _extract_amount(self, text):
-        # Look for currency amounts with better patterns
-        patterns = [
-            r'total[:\s]*\$?([0-9,]+\.?[0-9]*)',
-            r'amount[:\s]*\$?([0-9,]+\.?[0-9]*)',
-            r'grand\s+total[:\s]*\$?([0-9,]+\.?[0-9]*)',
-            r'\$([0-9,]+\.?[0-9]*)\s*total',
-            r'([0-9,]+\.[0-9]{2})\s*$'  # Amount at end of line
-        ]
-        for pattern in patterns:
-            match = re.search(pattern, text, re.IGNORECASE)
-            if match:
-                amount = match.group(1).replace(',', '')
-                try:
-                    float(amount)
-                    return amount
-                except:
-                    continue
-        return "0.00"
-    
-    def _extract_items(self, text):
-        # Enhanced item extraction
+    def _enhanced_extract_items(self, text):
+        """Enhanced item extraction with multiple pattern recognition"""
         items = []
-        # Look for line items with quantity and price patterns
+        
+        # Look for items sections first
+        items_sections = re.findall(r'(?:items?|products?|services?|description|line\s+items?)\s*:?\s*([\s\S]*?)(?:subtotal|total|tax|payment|terms|$)', text, re.IGNORECASE)
+        
+        if items_sections:
+            # Process items from dedicated sections
+            for section in items_sections:
+                items.extend(self._extract_items_from_section(section))
+        else:
+            # Fallback to general item extraction
+            items = self._extract_items(text)
+        
+        # Remove duplicates and validate
+        unique_items = []
+        seen_names = set()
+        
+        for item in items:
+            if self._is_valid_item(item):
+                name_key = item['name'].lower().strip()
+                if name_key not in seen_names:
+                    seen_names.add(name_key)
+                    unique_items.append(self._clean_item(item))
+        
+        return unique_items[:10]  # Limit to 10 items
+    
+    def _extract_items_from_section(self, section_text):
+        """Extract items from a dedicated items section"""
+        items = []
+        
+        # Multiple patterns for different formats
         patterns = [
-            r'(\d+)\s+([A-Za-z][^\n]*?)\s+\$?([0-9,]+\.?[0-9]*)',
-            r'([A-Za-z][^\n]*?)\s+(\d+)\s+\$?([0-9,]+\.?[0-9]*)',
+            # Table format: "1 Office Chair 75,000 150,000"
+            r'(\d+)\s+([A-Za-z][^\n\d]*?)\s+(\d+[,\d]*\.?\d*)\s+(\d+[,\d]*\.?\d*)',
+            # List format: "1. Office Chair - 2 × 75,000"
+            r'\d+\.?\s+([A-Za-z][^\n]*?)\s*[-–—]?\s*(\d+)\s*[×x✕]\s*(\d+[,\d]*\.?\d*)',
+            # Simple format: "Office Chair 2 75000"
+            r'([A-Za-z][A-Za-z\s]+)\s+(\d+)\s+(\d+[,\d]*\.?\d*)',
+            # Quantity first: "2 Office Chair 75000"
+            r'(\d+)\s+([A-Za-z][A-Za-z\s]+?)\s+(\d+[,\d]*\.?\d*)',
         ]
         
         for pattern in patterns:
-            matches = re.findall(pattern, text, re.IGNORECASE)
-            for match in matches[:5]:  # Limit to 5 items
+            matches = re.findall(pattern, section_text, re.IGNORECASE | re.MULTILINE)
+            for match in matches:
                 try:
-                    if len(match) == 3:
-                        qty, name, price = match
-                        if qty.isdigit() and float(price.replace(',', '')) > 0:
-                            items.append({
-                                'name': name.strip(),
-                                'quantity': int(qty),
-                                'unit_price': price.replace(',', '')
-                            })
-                except:
+                    if len(match) == 4:  # qty, name, unit_price, total
+                        qty, name, unit_price, _ = match
+                        items.append({
+                            'name': name.strip(),
+                            'quantity': int(qty),
+                            'unit_price': unit_price.replace(',', '')
+                        })
+                    elif len(match) == 3:
+                        # Determine order based on which makes sense
+                        if match[0].isdigit() and not match[1].isdigit():
+                            # qty, name, price
+                            qty, name, price = match
+                        elif not match[0].isdigit() and match[1].isdigit():
+                            # name, qty, price
+                            name, qty, price = match
+                        else:
+                            continue
+                        
+                        items.append({
+                            'name': name.strip(),
+                            'quantity': int(qty),
+                            'unit_price': price.replace(',', '')
+                        })
+                except (ValueError, IndexError):
                     continue
         
         return items
+    
+    def _enhanced_extract_amount(self, text):
+        """Enhanced total amount extraction with priority system"""
+        amounts_found = []
+        
+        # High priority patterns (final totals)
+        high_priority_patterns = [
+            r'(?:grand\s+total|final\s+total|amount\s+due|total\s+amount)\s*:?\s*(?:rwf\s*)?([0-9,]+\.?[0-9]*)',
+            r'total\s*:?\s*(?:rwf\s*)?([0-9,]+\.?[0-9]*)\s*$',  # Total at end of line
+        ]
+        
+        # Medium priority patterns
+        medium_priority_patterns = [
+            r'total\s*:?\s*(?:rwf\s*)?([0-9,]+\.?[0-9]*)',
+            r'(?:rwf|\$|€)\s*([0-9,]+\.?[0-9]*)\s*(?:total|due)',
+        ]
+        
+        # Low priority patterns
+        low_priority_patterns = [
+            r'amount\s*:?\s*(?:rwf\s*)?([0-9,]+\.?[0-9]*)',
+            r'([0-9,]+\.?[0-9]*)\s*(?:rwf|\$|€)\s*$',
+        ]
+        
+        # Process patterns by priority
+        for priority, patterns in enumerate([high_priority_patterns, medium_priority_patterns, low_priority_patterns]):
+            for pattern in patterns:
+                matches = re.findall(pattern, text, re.IGNORECASE | re.MULTILINE)
+                for match in matches:
+                    try:
+                        amount = match.replace(',', '').replace(' ', '')
+                        amount_float = float(amount)
+                        amounts_found.append((amount_float, amount, priority))
+                    except ValueError:
+                        continue
+        
+        if amounts_found:
+            # Sort by priority first, then by amount (largest)
+            amounts_found.sort(key=lambda x: (x[2], -x[0]))
+            return amounts_found[0][1]  # Return the best match
+        
+        return "0.00"
+    
+    def _extract_items(self, text):
+        # Enhanced item extraction that filters out totals/subtotals
+        items = []
+        
+        # Look for line items with quantity and price patterns
+        patterns = [
+            r'(\d+)\s+([A-Za-z][^\n]*?)\s+(?:rwf\s*)?([0-9,]+\.?[0-9]*)',  # qty item price
+            r'([A-Za-z][^\n]*?)\s+(\d+)\s+(?:rwf\s*)?([0-9,]+\.?[0-9]*)',  # item qty price
+            r'(\d+)\s*([A-Za-z][^\n]*?)\s*(?:rwf\s*)?([0-9,]+)',  # Simplified pattern
+        ]
+        
+        # Words to exclude from items (totals, subtotals, invoice headers, etc.)
+        exclude_keywords = [
+            'subtotal', 'total', 'tax', 'vat', 'discount', 'shipping', 
+            'handling', 'fee', 'charge', 'due', 'balance', 'amount',
+            'grand', 'final', 'sum', 'bill', 'invoice', 'pro-', 'pro ',
+            'receipt', 'number', '#', 'ref', 'reference', 'id', 'code'
+        ]
+        
+        for pattern in patterns:
+            matches = re.findall(pattern, text, re.IGNORECASE | re.MULTILINE)
+            for match in matches[:10]:  # Limit to 10 items max
+                try:
+                    if len(match) == 3:
+                        # Determine which is qty, name, price based on pattern
+                        if match[0].isdigit():
+                            qty, name, price = match
+                        else:
+                            name, qty, price = match
+                        
+                        # Clean up the name
+                        name = name.strip()
+                        
+                        # Skip if name contains excluded keywords
+                        if any(keyword in name.lower() for keyword in exclude_keywords):
+                            continue
+                        
+                        # Skip invoice numbers and headers (additional check)
+                        if re.search(r'invoice|pro-|#|receipt|ref', name.lower()):
+                            continue
+                        
+                        # Skip if name is too short or just numbers/symbols
+                        if len(name) < 3 or name.isdigit() or not re.search(r'[a-zA-Z]', name):
+                            continue
+                        
+                        # Validate quantity and price
+                        if qty.isdigit() and 0 < int(qty) <= 1000:
+                            price_clean = price.replace(',', '').replace(' ', '')
+                            try:
+                                price_float = float(price_clean)
+                                if 0 < price_float <= 10000000:  # Reasonable price range
+                                    items.append({
+                                        'name': name.strip(),
+                                        'quantity': int(qty),
+                                        'unit_price': price_clean
+                                    })
+                            except ValueError:
+                                continue
+                except (ValueError, IndexError):
+                    continue
+        
+        # Remove duplicates based on item name
+        seen_names = set()
+        unique_items = []
+        for item in items:
+            name_lower = item['name'].lower()
+            if name_lower not in seen_names:
+                seen_names.add(name_lower)
+                unique_items.append(item)
+        
+        return unique_items[:5]  # Return max 5 unique items
     
     def _extract_terms(self, text):
         # Extract payment terms
