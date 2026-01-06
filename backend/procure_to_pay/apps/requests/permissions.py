@@ -7,5 +7,9 @@ class CanApproveRequest(BasePermission):
 class CanUpdateRequest(BasePermission):
     def has_object_permission(self, request, view, obj):
         return (request.user == obj.created_by and 
-                obj.status == 'pending' and 
+                request.user.role == 'staff')
+
+class CanDeleteRequest(BasePermission):
+    def has_object_permission(self, request, view, obj):
+        return (request.user == obj.created_by and 
                 request.user.role == 'staff')
