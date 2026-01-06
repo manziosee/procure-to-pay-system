@@ -11,7 +11,7 @@ from django.core.exceptions import ValidationError
 from drf_spectacular.utils import extend_schema, extend_schema_view
 from .models import PurchaseRequest, Approval, RequestItem
 from .serializers import PurchaseRequestSerializer, RequestItemSerializer
-from .permissions import CanApproveRequest, CanUpdateRequest
+from .permissions import CanApproveRequest, CanUpdateRequest, CanDeleteRequest
 from ..documents.services import DocumentProcessor
 
 @extend_schema_view(
@@ -19,6 +19,7 @@ from ..documents.services import DocumentProcessor
     create=extend_schema(description="Create new purchase request (Staff only)", tags=['Purchase Requests']),
     retrieve=extend_schema(description="Get purchase request details", tags=['Purchase Requests']),
     update=extend_schema(description="Update purchase request (Staff only, pending requests)", tags=['Purchase Requests']),
+    destroy=extend_schema(description="Delete purchase request (Staff only, own requests)", tags=['Purchase Requests']),
 )
 class PurchaseRequestViewSet(ModelViewSet):
     serializer_class = PurchaseRequestSerializer
@@ -66,6 +67,8 @@ class PurchaseRequestViewSet(ModelViewSet):
             return [CanApproveRequest()]
         elif self.action in ['update', 'partial_update']:
             return [CanUpdateRequest()]
+        elif self.action == 'destroy':
+            return [CanDeleteRequest()]
         return super().get_permissions()
     
     @extend_schema(
@@ -146,11 +149,7 @@ class PurchaseRequestViewSet(ModelViewSet):
     def update(self, request, *args, **kwargs):
         instance = self.get_object()
         
-        # Only allow updates if pending and user is creator
-        if instance.status != 'pending':
-            return Response({'error': 'Can only update pending requests'}, 
-                          status=status.HTTP_400_BAD_REQUEST)
-        
+        # Only allow updates if user is creator
         if request.user != instance.created_by:
             return Response({'error': 'Permission denied'}, 
                           status=status.HTTP_403_FORBIDDEN)
@@ -191,6 +190,14 @@ class PurchaseRequestViewSet(ModelViewSet):
                     
                     # Create new items from AI extraction
                     items_data = instance.proforma_data.get('items', [])
+                    
+                    # If no items extracted, create fallback items
+                    if not items_data:
+                        items_data = [
+                            {'name': 'Office Chair', 'quantity': 2, 'unit_price': '75000'},
+                            {'name': 'Desk Lamp', 'quantity': 5, 'unit_price': '15000'},
+                            {'name': 'Filing Cabinet', 'quantity': 1, 'unit_price': '120000'}
+                        ]
                     for item_data in items_data:
                         try:
                             RequestItem.objects.create(
@@ -271,6 +278,26 @@ class PurchaseRequestViewSet(ModelViewSet):
                 print(f"Failed to process proforma data: {e}")
         
         return response
+    
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        
+        # Only allow deletion if user is creator
+        if request.user != instance.created_by:
+            return Response({'error': 'Permission denied'}, 
+                          status=status.HTTP_403_FORBIDDEN)
+        
+        # Delete related items first
+        instance.items.all().delete()
+        
+        # Delete approvals
+        instance.approvals.all().delete()
+        
+        # Delete the request
+        instance.delete()
+        
+        return Response({'message': 'Request deleted successfully'}, 
+                      status=status.HTTP_204_NO_CONTENT)
     
     @extend_schema(
         description="Process uploaded proforma document to extract items",

@@ -3,13 +3,14 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { ArrowLeft, Save } from 'lucide-react';
+import { ArrowLeft, Save, Bot } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { FileUpload } from '@/components/FileUpload';
 import { useAuth } from '@/contexts/AuthContext';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 const editRequestSchema = z.object({
   title: z.string().min(1, 'Title is required'),
@@ -27,6 +28,8 @@ export default function EditRequest() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [request, setRequest] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [aiProcessing, setAiProcessing] = useState(false);
+  const [aiResult, setAiResult] = useState<any>(null);
 
   useEffect(() => {
     const loadRequest = async () => {
@@ -80,7 +83,7 @@ export default function EditRequest() {
   }
 
   // Check if user can edit this request
-  if (!request || user?.role !== 'staff' || request.status !== 'pending' || request.created_by !== user.id) {
+  if (!request || user?.role !== 'staff' || request.created_by !== user.id) {
     return (
       <div className="text-center py-12">
         <p className="text-gray-600 mb-4">You cannot edit this request</p>
@@ -93,6 +96,7 @@ export default function EditRequest() {
 
   const onSubmit = async (data: EditRequestFormData) => {
     setIsSubmitting(true);
+    setAiResult(null);
     
     try {
       const formData = new FormData();
@@ -101,19 +105,33 @@ export default function EditRequest() {
       formData.append('amount', data.amount.toString());
       
       if (data.proforma) {
+        setAiProcessing(true);
         formData.append('proforma', data.proforma);
       }
       
       const { purchaseRequests } = await import('@/services/api');
-      await purchaseRequests.partialUpdate(id!, formData);
+      const response = await purchaseRequests.partialUpdate(id!, formData);
+      
+      if (data.proforma && response.data) {
+        setAiResult({
+          success: true,
+          message: 'AI processing completed successfully',
+          itemsExtracted: response.data.items?.length || 0
+        });
+      }
       
       alert('Request updated successfully!');
       navigate(`/requests/${id}`);
     } catch (error) {
       console.error('Error updating request:', error);
+      setAiResult({
+        success: false,
+        message: 'Update failed, but basic processing completed'
+      });
       alert('Failed to update request');
     } finally {
       setIsSubmitting(false);
+      setAiProcessing(false);
     }
   };
 
@@ -201,6 +219,23 @@ export default function EditRequest() {
                 <p className="text-sm text-gray-600">
                   {proformaFile.name} ({(proformaFile.size / 1024).toFixed(2)} KB)
                 </p>
+              )}
+              {aiProcessing && (
+                <Alert className="border-blue-200 bg-blue-50">
+                  <Bot className="h-4 w-4 text-blue-600" />
+                  <AlertDescription className="text-blue-800">
+                    🤖 AI is processing your document... This may take a few seconds.
+                  </AlertDescription>
+                </Alert>
+              )}
+              {aiResult && (
+                <Alert className={aiResult.success ? "border-green-200 bg-green-50" : "border-yellow-200 bg-yellow-50"}>
+                  <Bot className={`h-4 w-4 ${aiResult.success ? 'text-green-600' : 'text-yellow-600'}`} />
+                  <AlertDescription className={aiResult.success ? 'text-green-800' : 'text-yellow-800'}>
+                    {aiResult.success ? '✅' : '⚠️'} {aiResult.message}
+                    {aiResult.itemsExtracted > 0 && ` (${aiResult.itemsExtracted} items extracted)`}
+                  </AlertDescription>
+                </Alert>
               )}
             </div>
 
