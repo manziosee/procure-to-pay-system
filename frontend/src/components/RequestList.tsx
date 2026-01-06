@@ -268,7 +268,7 @@ export default function RequestList({ requests, loading, onDelete, showActions =
                               </span>
                             )}
                           </div>
-                        ) : (
+                        ) : user?.role !== 'staff' ? (
                           <Button 
                             asChild 
                             variant="outline" 
@@ -280,13 +280,24 @@ export default function RequestList({ requests, loading, onDelete, showActions =
                               View Details
                             </Link>
                           </Button>
-                        )}
-                        {user?.role === 'staff' && request.status === 'pending' && request.created_by === user.id && (
+                        ) : null}
+                        {user?.role === 'staff' && request.created_by === user.id && (
                           <>
                             <Button 
                               asChild 
+                              variant="outline" 
                               size="sm" 
-                              className="bg-blue-600 text-white hover:bg-blue-700 transition-all duration-300 hover:scale-105 font-semibold shadow-md"
+                              className="border-2 border-blue-200 text-blue-700 hover:bg-blue-50 hover:border-blue-300 transition-all duration-300 font-semibold"
+                            >
+                              <Link to={`/requests/${request.id}`}>
+                                <Eye className="mr-2 h-4 w-4" />
+                                View
+                              </Link>
+                            </Button>
+                            <Button 
+                              asChild 
+                              size="sm" 
+                              className="bg-green-600 text-white hover:bg-green-700 transition-all duration-300 hover:scale-105 font-semibold shadow-md"
                             >
                               <Link to={`/requests/${request.id}/edit`}>
                                 <Edit className="mr-2 h-4 w-4" />

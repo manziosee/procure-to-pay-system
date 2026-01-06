@@ -38,6 +38,7 @@ urlpatterns = [
     path('api/', include('procure_to_pay.apps.requests.urls')),
     path('api/documents/', include('procure_to_pay.apps.documents.urls')),
     path('api/proforma/', include('procure_to_pay.apps.documents.urls_new')),
+    path('api/finance/', include('procure_to_pay.apps.finance.urls')),
     path('api/', include('procure_to_pay.apps.api.urls')),
     
     # API Documentation

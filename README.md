@@ -94,47 +94,26 @@ A comprehensive **Procure-to-Pay** system with Django REST API backend and React
    cd procure-to-pay-system
    ```
 
-2. **Get OpenAI API Key**
-   - Visit [https://platform.openai.com/api-keys](https://platform.openai.com/api-keys)
-   - Create a new API key
-   - Copy the key for the next step
-
-3. **Configure Environment Securely**
+2. **Configure Environment**
    ```bash
-   # Run secure setup script
-   ./setup-env.sh
-   
-   # Or manually create environment files
-   cp backend/.env.example backend/.env
    cp .env.docker.template .env
+   # Edit .env and add your OPENAI_API_KEY
+   ```
+
+3. **Start with Docker**
+   ```bash
+   # Test Docker setup
+   ./test-docker.sh
    
-   # Edit files and add your actual API keys
-   # NEVER commit .env files to git!
+   # Start the system
+   docker compose -f docker-compose.simple.yml up --build
    ```
 
-4. **Choose your setup method:**
-
-   **Development Setup (Uses Neon PostgreSQL)**
-   ```bash
-   # Make sure to create .env file first with your API keys
-   cp .env.docker.template .env
-   # Edit .env with your actual keys
-   docker-compose up --build
-   ```
-
-   **Production Setup**
-   ```bash
-   # Use Fly.io secrets for production
-   fly secrets set OPENAI_API_KEY=sk-your-key
-   docker-compose -f docker-compose.prod.yml up --build
-   ```
-
-3. **Access the applications**
+4. **Access the applications**
    - 🌐 **Frontend**: http://localhost:3000
    - 🔧 **Backend API**: http://localhost:8000
    - 📚 **Swagger UI**: http://localhost:8000/api/docs/
    - 📖 **ReDoc**: http://localhost:8000/api/redoc/
-   - 🔗 **API Schema**: http://localhost:8000/api/schema/
 
 ## 🔐 Security & API Keys
 
@@ -142,7 +121,7 @@ A comprehensive **Procure-to-Pay** system with Django REST API backend and React
 - All `.env*` files are in `.gitignore`
 - Use `./setup-env.sh` for secure environment setup
 - Get OpenAI API key: [https://platform.openai.com/api-keys](https://platform.openai.com/api-keys)
-- Use Fly.io secrets for production: `fly secrets set OPENAI_API_KEY=sk-your-key`
+- Use Fly.io secrets for production: `fly secrets set OPENAI_API_KEY=<your-key>`
 
 ### 🔍 **Security Checklist:**
 - ✅ API keys in environment variables only
@@ -208,6 +187,13 @@ python3 test_api.py
 | `POST` | `/api/requests/{id}/process-proforma/` | Process existing proforma | Staff/Finance |
 | `GET` | `/api/requests/dashboard-stats/` | Get dashboard statistics | Authenticated |
 | `POST` | `/api/documents/process/` | Process document | Authenticated |
+| `GET` | `/api/finance/documents/` | List financial documents | Finance |
+| `POST` | `/api/finance/documents/` | Upload financial document | Finance |
+| `GET` | `/api/finance/documents/export_financial_report/` | Export financial report CSV | Finance |
+| `GET` | `/api/finance/alerts/` | List compliance alerts | Finance/Approvers |
+| `POST` | `/api/finance/alerts/generate_alerts/` | Generate compliance alerts | Finance |
+| `GET` | `/api/finance/alerts/dashboard_stats/` | Get finance dashboard stats | Finance |
+| `PATCH` | `/api/finance/alerts/{id}/resolve/` | Resolve compliance alert | Finance/Approvers |
 
 **📖 Complete API Documentation**: [API_DOCUMENTATION.md](API_DOCUMENTATION.md)  
 **🔧 Swagger Documentation**: [SWAGGER_ENDPOINTS.md](SWAGGER_ENDPOINTS.md)
@@ -297,10 +283,10 @@ See [DEPLOYMENT.md](DEPLOYMENT.md) for complete environment setup.
 4. **Add to Environment**:
    ```bash
    # In your .env file (NOT committed to git)
-   OPENAI_API_KEY=sk-your-actual-key-here
+   OPENAI_API_KEY=<your-actual-key-here>
    
    # OR set as environment variable
-   export OPENAI_API_KEY=sk-your-actual-key-here
+   export OPENAI_API_KEY=<your-actual-key-here>
    ```
 
 **Without API Key**: System works with basic text extraction (no AI features)
@@ -354,11 +340,11 @@ curl -X POST https://procure-to-pay-backend.fly.dev/api/auth/login/ \
 
 ### Docker Development
 ```bash
-# Development environment
-docker-compose up --build
+# Test Docker setup
+./test-docker.sh
 
-# Test Docker build
-./TEST_DOCKER.sh
+# Start development environment
+docker compose -f docker-compose.simple.yml up --build
 ```
 
 ### Production Deployment
@@ -416,14 +402,19 @@ python3 VALIDATE_BUILD.py
 
 ## 🔧 Recent Updates
 
-### ✅ **Latest Improvements**
+### 🎆 **Latest Improvements**
+- **New Finance APIs**: Added comprehensive finance endpoints for document management and compliance alerts
+- **Export Financial Reports**: Backend API endpoint for CSV export with proper authentication
+- **Document Upload**: Full backend support for financial document uploads with file validation
+- **Compliance Alerts**: Automated alert generation for high-value requests and overdue reviews
+- **Dashboard Statistics**: Real-time finance dashboard stats with comprehensive metrics
 - **Enhanced Dashboard**: Real-time statistics with calculated growth percentages
 - **Process Existing Proforma**: New endpoint to process already uploaded documents
 - **Automatic Item Creation**: AI extracts items and creates RequestItem objects automatically
 - **Enhanced UI**: Clean black and white theme across all pages
 - **Fixed Approval Buttons**: Visible red reject and green approve buttons for both Level 1 & 2 approvers
 - **Approval Statistics**: Individual approval tracking for approvers (shows their personal approval/rejection counts)
-- **Finance Export Features**: Finance users can export request data instead of viewing details
+- **Finance Export Features**: Finance users can export request data with backend API integration
 - **Document Upload**: Enhanced file upload supporting PDF, images, and other document formats
 - **Modal Dialogs**: Proper confirmation dialogs for approve/reject actions
 - **Form Validation**: Real-time validation with proper error handling

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { ArrowLeft, Download, CheckCircle, XCircle, Upload, Edit, FileText } from 'lucide-react';
+import { ArrowLeft, Download, CheckCircle, XCircle, Upload, Edit, FileText, Eye, Trash2 } from 'lucide-react';
 import { StatusBadge } from '@/components/StatusBadge';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -336,6 +336,27 @@ export default function RequestDetail() {
                 <p className="text-sm font-semibold text-gray-700 mb-2">Description</p>
                 <p className="text-gray-900 leading-relaxed">{request.description}</p>
               </div>
+              
+              {/* Display extracted items if available */}
+              {request.items && request.items.length > 0 && (
+                <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+                  <p className="text-sm font-semibold text-blue-700 mb-3">📋 Extracted Items</p>
+                  <div className="space-y-2">
+                    {request.items.map((item: any, index: number) => (
+                      <div key={item.id || index} className="flex justify-between items-center p-2 bg-white rounded border border-blue-200">
+                        <div className="flex-1">
+                          <p className="font-medium text-blue-900">{item.name}</p>
+                          <p className="text-sm text-blue-600">Qty: {item.quantity} × RWF {item.unit_price}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-semibold text-blue-800">RWF {item.total_price}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              
               <Separator className="bg-gray-200" />
               <div className="text-center p-6 bg-gradient-to-r from-green-50 to-blue-50 rounded-lg border border-green-200">
                 <p className="text-sm font-semibold text-gray-700 mb-2">Request Amount</p>
@@ -384,15 +405,35 @@ export default function RequestDetail() {
                   </div>
                 </div>
                 <div className="flex items-center space-x-2">
-                  {request.proforma && (
+                  {(request.proforma || request.proforma_filename) && (
                     <Badge className="bg-green-100 text-green-800 border border-green-300">
                       ✅ Processed
                     </Badge>
                   )}
                 </div>
               </div>
-              {request.proforma ? (
+              {request.proforma || request.proforma_filename ? (
                 <div className="space-y-3">
+                  <div className="p-3 bg-white rounded-lg border border-blue-200">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center">
+                        <div className="h-8 w-8 bg-blue-100 rounded flex items-center justify-center mr-3">
+                          📎
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-blue-900">
+                            {request.proforma_filename || `proforma-${request.id}.pdf`}
+                          </p>
+                          <p className="text-xs text-blue-600">
+                            Uploaded by staff • AI processed
+                          </p>
+                        </div>
+                      </div>
+                      <div className="text-xs text-blue-500">
+                        {new Date(request.created_at).toLocaleDateString()}
+                      </div>
+                    </div>
+                  </div>
                   <Button 
                     variant="outline" 
                     size="sm" 
@@ -405,7 +446,7 @@ export default function RequestDetail() {
                         const url = URL.createObjectURL(blob);
                         const link = document.createElement('a');
                         link.href = url;
-                        link.download = `proforma-${request.id}.pdf`;
+                        link.download = request.proforma_filename || `proforma-${request.id}.pdf`;
                         link.click();
                         URL.revokeObjectURL(url);
                       } catch (error) {
@@ -419,23 +460,60 @@ export default function RequestDetail() {
                   </Button>
                   {request.ai_extracted_data && (
                     <div className="p-3 bg-blue-100 rounded-lg border border-blue-200">
-                      <p className="text-sm font-semibold text-blue-900 mb-2">🤖 AI Extracted Data:</p>
-                      <div className="text-sm text-blue-800 space-y-1">
-                        {Object.entries(request.ai_extracted_data).map(([key, value]) => (
-                          <div key={key} className="flex justify-between">
-                            <span className="font-medium">{key.replace('_', ' ').toUpperCase()}:</span>
-                            <span>{String(value)}</span>
+                      <p className="text-sm font-semibold text-blue-900 mb-2">🤖 AI Extraction Complete</p>
+                      <div className="text-sm text-blue-800 space-y-2">
+                        <p className="font-medium">Successfully processed your proforma invoice.</p>
+                        
+                        <div className="grid grid-cols-2 gap-4 mt-3">
+                          <div>
+                            <p className="font-semibold text-blue-700">Vendor:</p>
+                            <p className="text-blue-900">{request.ai_extracted_data.vendor || request.proforma_data?.vendor || 'Unknown'}</p>
                           </div>
-                        ))}
+                          <div>
+                            <p className="font-semibold text-blue-700">Total Amount:</p>
+                            <p className="text-blue-900 font-bold">RWF {parseFloat(request.ai_extracted_data.total_amount || request.proforma_data?.total_amount || '0').toLocaleString()}</p>
+                          </div>
+                          <div>
+                            <p className="font-semibold text-blue-700">Items Found:</p>
+                            <p className="text-blue-900">{request.items?.length || 0} items</p>
+                          </div>
+                          <div>
+                            <p className="font-semibold text-blue-700">Processing:</p>
+                            <p className="text-blue-900">{request.ai_extracted_data.processing_method === 'ai_extraction' ? 'AI' : 'Basic'}</p>
+                          </div>
+                          <div>
+                            <p className="font-semibold text-blue-700">Confidence:</p>
+                            <p className="text-blue-900">{Math.round((request.ai_extracted_data.confidence || request.proforma_data?.confidence || 0.5) * 100)}%</p>
+                          </div>
+                        </div>
+                        
+                        {request.items && request.items.length > 0 && (
+                          <div className="mt-3">
+                            <p className="font-semibold text-blue-700 mb-2">Extracted Items:</p>
+                            <div className="space-y-1">
+                              {request.items.slice(0, 3).map((item: any, index: number) => (
+                                <div key={item.id || index} className="text-xs text-blue-800">
+                                  {item.name} - Qty: {item.quantity} - RWF {item.unit_price}
+                                </div>
+                              ))}
+                              {request.items.length > 3 && (
+                                <div className="text-xs text-blue-600 italic">...and {request.items.length - 3} more items</div>
+                              )}
+                            </div>
+                          </div>
+                        )}
                       </div>
                     </div>
                   )}
                 </div>
               ) : (
-                <div className="text-center py-4">
-                  <div className="text-4xl mb-2">📄</div>
-                  <p className="text-sm text-blue-700 font-medium">No file uploaded</p>
-                  <p className="text-xs text-blue-600">Upload a proforma for AI processing</p>
+                <div className="text-center py-6">
+                  <div className="text-5xl mb-3">📄</div>
+                  <p className="text-sm text-blue-700 font-medium mb-1">No proforma uploaded</p>
+                  <p className="text-xs text-blue-600">Staff needs to upload proforma for processing</p>
+                  <div className="mt-3 p-2 bg-blue-100 rounded-lg">
+                    <p className="text-xs text-blue-800">💡 Contact staff to upload the proforma document</p>
+                  </div>
                 </div>
               )}
             </div>
@@ -461,35 +539,60 @@ export default function RequestDetail() {
                 </div>
               </div>
               {request.purchase_order || request.status === 'approved' ? (
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  className="w-full border-2 border-green-300 text-green-700 hover:bg-green-100 hover:border-green-400 transition-all duration-300"
-                  onClick={async () => {
-                    try {
-                      const { purchaseRequests } = await import('@/services/api');
-                      const response = await purchaseRequests.downloadDocument(request.id.toString(), 'purchase_order');
-                      const blob = new Blob([response.data]);
-                      const url = URL.createObjectURL(blob);
-                      const link = document.createElement('a');
-                      link.href = url;
-                      link.download = `purchase-order-${request.id}.pdf`;
-                      link.click();
-                      URL.revokeObjectURL(url);
-                    } catch (error) {
-                      console.error('Download failed:', error);
-                      alert('Failed to download purchase order');
-                    }
-                  }}
-                >
-                  <Download className="mr-2 h-4 w-4" />
-                  Download PO
-                </Button>
+                <div className="space-y-3">
+                  <div className="p-3 bg-white rounded-lg border border-green-200">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center">
+                        <div className="h-8 w-8 bg-green-100 rounded flex items-center justify-center mr-3">
+                          📝
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-green-900">
+                            {request.purchase_order_filename || `PO-${request.id}.pdf`}
+                          </p>
+                          <p className="text-xs text-green-600">
+                            Purchase Order #{request.id} • Auto-generated
+                          </p>
+                        </div>
+                      </div>
+                      <div className="text-xs text-green-500">
+                        {request.status === 'approved' ? 'Ready' : 'Generated'}
+                      </div>
+                    </div>
+                  </div>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="w-full border-2 border-green-300 text-green-700 hover:bg-green-100 hover:border-green-400 transition-all duration-300"
+                    onClick={async () => {
+                      try {
+                        const { purchaseRequests } = await import('@/services/api');
+                        const response = await purchaseRequests.downloadDocument(request.id.toString(), 'purchase_order');
+                        const blob = new Blob([response.data]);
+                        const url = URL.createObjectURL(blob);
+                        const link = document.createElement('a');
+                        link.href = url;
+                        link.download = `purchase-order-${request.id}.pdf`;
+                        link.click();
+                        URL.revokeObjectURL(url);
+                      } catch (error) {
+                        console.error('Download failed:', error);
+                        alert('Failed to download purchase order');
+                      }
+                    }}
+                  >
+                    <Download className="mr-2 h-4 w-4" />
+                    Download PO
+                  </Button>
+                </div>
               ) : (
-                <div className="text-center py-4">
-                  <div className="text-4xl mb-2">⏳</div>
-                  <p className="text-sm text-green-700 font-medium">Not generated yet</p>
+                <div className="text-center py-6">
+                  <div className="text-5xl mb-3">⏳</div>
+                  <p className="text-sm text-green-700 font-medium mb-1">Not generated yet</p>
                   <p className="text-xs text-green-600">Will be auto-generated upon approval</p>
+                  <div className="mt-3 p-2 bg-green-100 rounded-lg">
+                    <p className="text-xs text-green-800">💡 Requires both Level 1 & Level 2 approval</p>
+                  </div>
                 </div>
               )}
             </div>
@@ -516,6 +619,26 @@ export default function RequestDetail() {
               </div>
               {request.receipt ? (
                 <div className="space-y-3">
+                  <div className="p-3 bg-white rounded-lg border border-purple-200">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center">
+                        <div className="h-8 w-8 bg-purple-100 rounded flex items-center justify-center mr-3">
+                          📎
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-purple-900">
+                            {request.receipt_filename || `receipt-${request.id}.pdf`}
+                          </p>
+                          <p className="text-xs text-purple-600">
+                            Submitted & AI-validated
+                          </p>
+                        </div>
+                      </div>
+                      <div className="text-xs text-purple-500">
+                        Verified
+                      </div>
+                    </div>
+                  </div>
                   <Button 
                     variant="outline" 
                     size="sm" 
@@ -528,7 +651,7 @@ export default function RequestDetail() {
                         const url = URL.createObjectURL(blob);
                         const link = document.createElement('a');
                         link.href = url;
-                        link.download = `receipt-${request.id}.pdf`;
+                        link.download = request.receipt_filename || `receipt-${request.id}.pdf`;
                         link.click();
                         URL.revokeObjectURL(url);
                       } catch (error) {
@@ -542,30 +665,116 @@ export default function RequestDetail() {
                   </Button>
                   {request.receipt_validation_result && (
                     <div className="p-3 bg-purple-100 rounded-lg border border-purple-200">
-                      <p className="text-sm font-semibold text-purple-900 mb-2">🤖 AI Validation Result:</p>
-                      <div className="text-sm text-purple-800">
-                        <div className="flex items-center space-x-2 mb-1">
-                          <span className={`h-2 w-2 rounded-full ${
-                            request.receipt_validation_result.is_valid ? 'bg-green-500' : 'bg-red-500'
-                          }`}></span>
-                          <span className="font-medium">
-                            {request.receipt_validation_result.is_valid ? 'Valid' : 'Invalid'}
-                          </span>
+                      <p className="text-sm font-semibold text-purple-900 mb-2">🤖 AI Validation Complete</p>
+                      <div className="text-sm text-purple-800 space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="font-medium">Validation Status:</span>
+                          <div className="flex items-center space-x-2">
+                            <span className={`h-2 w-2 rounded-full ${
+                              request.receipt_validation_result.is_valid ? 'bg-green-500' : 'bg-red-500'
+                            }`}></span>
+                            <span className={`font-bold ${
+                              request.receipt_validation_result.is_valid ? 'text-green-700' : 'text-red-700'
+                            }`}>
+                              {request.receipt_validation_result.is_valid ? '✅ Valid' : '❌ Invalid'}
+                            </span>
+                          </div>
                         </div>
+                        
                         {request.receipt_validation_result.confidence && (
-                          <p className="text-xs">Confidence: {Math.round(request.receipt_validation_result.confidence * 100)}%</p>
+                          <div className="flex items-center justify-between">
+                            <span className="font-medium">AI Confidence:</span>
+                            <span className="font-bold text-purple-900">
+                              {Math.round(request.receipt_validation_result.confidence * 100)}%
+                            </span>
+                          </div>
+                        )}
+                        
+                        <div className="flex items-center justify-between">
+                          <span className="font-medium">Processing:</span>
+                          <span className="text-purple-900">AI Validation</span>
+                        </div>
+                        
+                        {request.receipt_validation_result.discrepancies && request.receipt_validation_result.discrepancies.length > 0 ? (
+                          <div className="mt-2 p-2 bg-red-50 rounded border border-red-200">
+                            <p className="text-xs font-semibold text-red-700 mb-1">⚠️ Issues Found:</p>
+                            {request.receipt_validation_result.discrepancies.slice(0, 2).map((issue: any, index: number) => (
+                              <p key={index} className="text-xs text-red-600">• {issue.reason || issue}</p>
+                            ))}
+                            {request.receipt_validation_result.discrepancies.length > 2 && (
+                              <p className="text-xs text-red-500 italic">...and {request.receipt_validation_result.discrepancies.length - 2} more</p>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="mt-2 p-2 bg-green-50 rounded border border-green-200">
+                            <p className="text-xs font-semibold text-green-700">✅ All validations passed</p>
+                            <p className="text-xs text-green-600">Receipt matches purchase order requirements</p>
+                          </div>
                         )}
                       </div>
                     </div>
                   )}
                 </div>
               ) : (
-                <div className="text-center py-4">
-                  <div className="text-4xl mb-2">📄</div>
-                  <p className="text-sm text-purple-700 font-medium">No receipt submitted</p>
-                  <p className="text-xs text-purple-600">
-                    {request.status === 'approved' ? 'Submit receipt for AI validation' : 'Available after approval'}
+                <div className="text-center py-6">
+                  <div className="text-5xl mb-3">🤖</div>
+                  <p className="text-sm text-purple-700 font-medium mb-1">AI Receipt Validation Ready</p>
+                  <p className="text-xs text-purple-600 mb-3">
+                    {request.status === 'approved' ? 'Submit receipt for intelligent validation' : 'Available after approval'}
                   </p>
+                  {request.status === 'approved' && user?.role === 'staff' && (
+                    <div className="space-y-3">
+                      <div className="p-3 bg-purple-100 rounded-lg border border-purple-200">
+                        <p className="text-xs font-semibold text-purple-800 mb-2">🧠 AI Validation Features:</p>
+                        <div className="grid grid-cols-1 gap-2 text-xs text-purple-700">
+                          <div className="flex items-center">
+                            <span className="mr-2">✅</span>
+                            <span>Smart amount verification against PO</span>
+                          </div>
+                          <div className="flex items-center">
+                            <span className="mr-2">🔍</span>
+                            <span>Automatic vendor & date extraction</span>
+                          </div>
+                          <div className="flex items-center">
+                            <span className="mr-2">📊</span>
+                            <span>Line item matching & validation</span>
+                          </div>
+                          <div className="flex items-center">
+                            <span className="mr-2">⚡</span>
+                            <span>Instant fraud detection</span>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="p-2 bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg border border-purple-200">
+                        <p className="text-xs text-purple-800 font-medium">💡 Supported: PDF, JPG, PNG • Max 10MB</p>
+                      </div>
+                      <Button 
+                        className="w-full bg-purple-600 text-white hover:bg-purple-700 transition-all duration-300 font-semibold"
+                        onClick={() => {
+                          const fileInput = document.createElement('input');
+                          fileInput.type = 'file';
+                          fileInput.accept = '.pdf,.jpg,.jpeg,.png';
+                          fileInput.onchange = async (e) => {
+                            const file = (e.target as HTMLInputElement).files?.[0];
+                            if (file) {
+                              setReceipt(file);
+                              await handleReceiptSubmit();
+                            }
+                          };
+                          fileInput.click();
+                        }}
+                      >
+                        <Upload className="mr-2 h-4 w-4" />
+                        Upload Receipt for AI Validation
+                      </Button>
+                    </div>
+                  )}
+                  {request.status !== 'approved' && (
+                    <div className="p-3 bg-purple-50 rounded-lg border border-purple-200">
+                      <p className="text-xs text-purple-700 font-medium mb-1">🔒 Waiting for Approval</p>
+                      <p className="text-xs text-purple-600">AI validation will be available once the purchase order is approved</p>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -590,7 +799,7 @@ export default function RequestDetail() {
         </Card>
 
         {/* Staff Actions */}
-        {user?.role === 'staff' && request.status === 'pending' && request.created_by === user.id && (
+        {user?.role === 'staff' && request.created_by === user.id && (
           <Card className="card-premium bg-white border-2 border-blue-200 animate-slide-up">
             <CardHeader>
               <CardTitle className="text-xl font-bold text-blue-800 flex items-center">
@@ -598,16 +807,50 @@ export default function RequestDetail() {
                 Staff Actions
               </CardTitle>
               <CardDescription className="text-blue-600">
-                Edit your pending request before approval
+                Manage your purchase request
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <Button asChild className="btn-premium h-12 px-6 text-base font-semibold shadow-lg hover:shadow-xl transition-all duration-300">
-                <Link to={`/requests/${id}/edit`}>
-                  <Edit className="mr-2 h-5 w-5" />
-                  Edit Request
-                </Link>
-              </Button>
+              <div className="flex gap-4">
+                <Button 
+                  asChild 
+                  variant="outline" 
+                  className="flex-1 h-12 border-2 border-blue-200 text-blue-700 hover:bg-blue-50 hover:border-blue-300 transition-all duration-300 font-semibold"
+                >
+                  <Link to={`/requests/${id}`}>
+                    <Eye className="mr-2 h-5 w-5" />
+                    View Details
+                  </Link>
+                </Button>
+                <Button 
+                  asChild 
+                  className="flex-1 h-12 bg-green-600 text-white hover:bg-green-700 transition-all duration-300 hover:scale-105 font-semibold shadow-lg hover:shadow-xl"
+                >
+                  <Link to={`/requests/${id}/edit`}>
+                    <Edit className="mr-2 h-5 w-5" />
+                    Edit Request
+                  </Link>
+                </Button>
+                <Button 
+                  onClick={async () => {
+                    if (!window.confirm('Are you sure you want to delete this request? This action cannot be undone.')) return;
+                    
+                    try {
+                      const { purchaseRequests } = await import('@/services/api');
+                      await purchaseRequests.delete(id!);
+                      alert('Request deleted successfully!');
+                      navigate('/');
+                    } catch (error) {
+                      console.error('Error deleting request:', error);
+                      alert('Failed to delete request');
+                    }
+                  }}
+                  className="flex-1 h-12 bg-red-600 text-white hover:bg-red-700 transition-all duration-300 hover:scale-105 font-semibold shadow-lg hover:shadow-xl"
+                >
+                  <Trash2 className="mr-2 h-5 w-5" />
+                  Delete Request
+                </Button>
+              </div>
             </CardContent>
           </Card>
         )}
@@ -688,7 +931,7 @@ export default function RequestDetail() {
         )}
         {/* Receipt Submission */}
         {canSubmitReceipt && (
-          <div className="animate-slide-up">
+          <div className="animate-slide-up" data-receipt-validator>
             <ReceiptValidator
               requestId={id!}
               purchaseOrder={request.purchase_order}
