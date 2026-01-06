@@ -32,6 +32,7 @@ LOCAL_APPS = [
     'procure_to_pay.apps.authentication',
     'procure_to_pay.apps.requests',
     'procure_to_pay.apps.documents',
+    'procure_to_pay.apps.finance',
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
