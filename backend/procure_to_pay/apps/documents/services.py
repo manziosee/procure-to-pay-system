@@ -323,35 +323,18 @@ IMPORTANT: Use the FINAL TOTAL amount that includes all taxes and fees, NOT the 
     
     def _basic_extract_proforma(self, text):
         """Enhanced basic extraction with better item and total detection"""
-        print(f"DEBUG: _basic_extract_proforma called with text length: {len(text)}")
-        print(f"DEBUG: Text preview: {text[:200]}...")
-        
         items = self._enhanced_extract_items(text)
         total = self._enhanced_extract_amount(text)
-        
-        # If no items found, create fallback items based on common patterns
-        if not items:
-            print("DEBUG: No items extracted, creating fallback items")
-            # Look for any price-like numbers in the text
-            price_matches = re.findall(r'([0-9,]+)(?:\s*RWF)?', text)
-            if len(price_matches) >= 3:  # At least 3 numbers found
-                items = [
-                    {'name': 'Office Chair', 'quantity': 2, 'unit_price': '75000'},
-                    {'name': 'Desk Lamp', 'quantity': 5, 'unit_price': '15000'},
-                    {'name': 'Filing Cabinet', 'quantity': 1, 'unit_price': '120000'}
-                ]
-                print("DEBUG: Added fallback items")
         
         result = {
             'vendor': self._extract_vendor(text),
             'total_amount': total,
             'items': items,
             'terms': self._extract_terms(text),
-            'confidence': 0.7,
+            'confidence': 0.9,
             'processing_method': 'enhanced_basic_extraction'
         }
         
-        print(f"DEBUG: Final result: {result}")
         return result
     
     def _extract_receipt_data(self, text):
@@ -409,67 +392,71 @@ IMPORTANT: Use the FINAL TOTAL amount that includes all taxes and fees, NOT the 
         """Enhanced item extraction with multiple pattern recognition"""
         items = []
         
-        # Look for table-like structures with various patterns
-        patterns = [
-            # Pattern: "1 Office Chair 2 75,000 150,000"
-            r'(\d+)\s+([A-Za-z][^\d\n]*?)\s+(\d+)\s+([0-9,]+)\s+([0-9,]+)',
-            # Pattern: "Office Chair 2 75,000"
-            r'([A-Za-z][^\d\n]*?)\s+(\d+)\s+([0-9,]+)',
-            # Pattern: "1Office Chair275,000150,000" (concatenated)
-            r'(\d+)([A-Za-z][A-Za-z\s]+?)(\d+)([0-9,]+)([0-9,]+)',
-            # Pattern: Item name with price at end
-            r'([A-Za-z][A-Za-z\s]{3,}).*?([0-9,]+)$'
-        ]
+        # Look for the specific table format in the proforma
+        # Pattern: "1Office Chair275,000150,000"
+        table_pattern = r'(\d+)([A-Za-z][A-Za-z\s]+?)(\d+)([0-9,]+)([0-9,]+)'
+        matches = re.findall(table_pattern, text)
         
-        for pattern in patterns:
-            matches = re.findall(pattern, text, re.MULTILINE)
-            
-            for match in matches:
-                try:
-                    if len(match) == 5:  # Full table format
-                        if match[0].isdigit():  # Starts with item number
-                            _, name, qty, unit_price, total = match
-                        else:  # Concatenated format
-                            _, name, qty_str, price_str, total_str = match
-                            qty = int(qty_str)
-                            unit_price = int(price_str.replace(',', ''))
-                    elif len(match) == 3:  # Name, qty, price
-                        name, qty, unit_price = match
-                        qty = int(qty)
-                        unit_price = int(unit_price.replace(',', ''))
-                    elif len(match) == 2:  # Name and price only
-                        name, unit_price = match
-                        qty = 1
-                        unit_price = int(unit_price.replace(',', ''))
-                    else:
-                        continue
-                    
-                    # Clean name
-                    name = name.strip()
-                    
-                    # Skip invalid items
-                    if (len(name) < 3 or 
-                        any(word in name.lower() for word in ['total', 'subtotal', 'tax', 'invoice', 'proforma']) or
-                        qty <= 0 or qty > 1000 or
-                        unit_price <= 0 or unit_price > 10000000):
-                        continue
-                    
+        for match in matches:
+            try:
+                item_num, name, qty_part, price_part, total_part = match
+                
+                # Parse the concatenated numbers
+                # "275,000" should be parsed as qty=2, unit_price=75,000
+                qty = int(qty_part)
+                unit_price = int(price_part.replace(',', ''))
+                total_price = int(total_part.replace(',', ''))
+                
+                # Validate: qty * unit_price should equal total_price
+                if qty * unit_price == total_price:
                     items.append({
-                        'name': name,
+                        'name': name.strip(),
                         'quantity': qty,
                         'unit_price': str(unit_price)
                     })
-                    
-                except (ValueError, IndexError):
-                    continue
+            except (ValueError, TypeError):
+                continue
         
-        # Remove duplicates
-        seen = set()
+        # If no items found with concatenated format, try standard table format
+        if not items:
+            standard_patterns = [
+                r'(\d+)\s+([A-Za-z][^\d\n]*?)\s+(\d+)\s+([0-9,]+)\s+([0-9,]+)',
+                r'([A-Za-z][^\d\n]*?)\s+(\d+)\s+([0-9,]+)\s+([0-9,]+)'
+            ]
+            
+            for pattern in standard_patterns:
+                matches = re.findall(pattern, text, re.MULTILINE)
+                for match in matches:
+                    try:
+                        if len(match) == 5:
+                            _, name, qty, unit_price, total = match
+                        elif len(match) == 4:
+                            name, qty, unit_price, total = match
+                        else:
+                            continue
+                            
+                        qty = int(qty)
+                        unit_price = int(unit_price.replace(',', ''))
+                        total_price = int(total.replace(',', ''))
+                        
+                        # Validate calculation
+                        if abs(qty * unit_price - total_price) <= total_price * 0.05:
+                            items.append({
+                                'name': name.strip(),
+                                'quantity': qty,
+                                'unit_price': str(unit_price)
+                            })
+                    except (ValueError, TypeError):
+                        continue
+        
+        # Remove duplicates by name
         unique_items = []
+        seen_names = set()
+        
         for item in items:
-            key = item['name'].lower().strip()
-            if key not in seen:
-                seen.add(key)
+            name_key = item['name'].lower().strip()
+            if name_key not in seen_names:
+                seen_names.add(name_key)
                 unique_items.append(item)
         
         return unique_items[:10]
