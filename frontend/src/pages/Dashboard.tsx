@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useRequestsSync } from '@/hooks/useRequestsSync';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
+import { finance as financeAPI } from '@/services/api';
 
 // Simple Chart Components for Dashboard Analytics
 const SimpleBarChart = ({ data, title }: { data: Array<{label: string, value: number, color: string}>, title: string }) => {
@@ -505,18 +506,8 @@ export default function Dashboard() {
                         formData.append('document_type', 'financial_report');
                         
                         try {
-                          const response = await fetch('/api/finance/documents/', {
-                            method: 'POST',
-                            headers: {
-                              'Authorization': `Bearer ${localStorage.getItem('access_token')}`
-                            },
-                            body: formData
-                          });
-                          if (response.ok) {
-                            alert('Document uploaded successfully!');
-                          } else {
-                            alert(`File "${file.name}" selected. Upload functionality will be available when backend is deployed.`);
-                          }
+                          await financeAPI.uploadDocument(formData);
+                          alert('Document uploaded successfully!');
                         } catch (error) {
                           console.error('Error uploading document:', error);
                           alert(`File "${file.name}" selected. Upload functionality will be available when backend is deployed.`);
@@ -534,40 +525,13 @@ export default function Dashboard() {
                   className="w-full border-purple-300 text-purple-700 hover:bg-purple-100"
                   onClick={async () => {
                     try {
-                      const response = await fetch('/api/finance/documents/export_financial_report/', {
-                        method: 'GET',
-                        headers: {
-                          'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
-                          'Content-Type': 'application/json'
-                        }
-                      });
-                      if (response.ok) {
-                        const blob = await response.blob();
-                        const url = URL.createObjectURL(blob);
-                        const a = document.createElement('a');
-                        a.href = url;
-                        a.download = 'financial_report.csv';
-                        a.click();
-                        URL.revokeObjectURL(url);
-                      } else {
-                        // Fallback to client-side generation
-                        const csvData = requests.map(r => ({
-                          Title: r.title,
-                          Amount: r.amount,
-                          Status: r.status,
-                          'Created By': r.created_by_name,
-                          'Created At': new Date(r.created_at).toLocaleDateString()
-                        }));
-                        
-                        const csv = [Object.keys(csvData[0]).join(','), ...csvData.map(row => Object.values(row).join(','))].join('\n');
-                        const blob = new Blob([csv], { type: 'text/csv' });
-                        const url = URL.createObjectURL(blob);
-                        const a = document.createElement('a');
-                        a.href = url;
-                        a.download = 'financial_report.csv';
-                        a.click();
-                        URL.revokeObjectURL(url);
-                      }
+                      const response = await financeAPI.exportReport();
+                      const url = URL.createObjectURL(response.data);
+                      const a = document.createElement('a');
+                      a.href = url;
+                      a.download = 'financial_report.csv';
+                      a.click();
+                      URL.revokeObjectURL(url);
                     } catch (error) {
                       console.error('Export error:', error);
                       // Fallback to client-side generation
@@ -623,23 +587,8 @@ export default function Dashboard() {
                   className="w-full border-orange-300 text-orange-700 hover:bg-orange-100"
                   onClick={async () => {
                     try {
-                      const response = await fetch('/api/finance/alerts/generate_alerts/', {
-                        method: 'POST',
-                        headers: {
-                          'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
-                          'Content-Type': 'application/json'
-                        }
-                      });
-                      if (response.ok) {
-                        const data = await response.json();
-                        alert(`Generated ${data.alerts_created} compliance alerts`);
-                      } else {
-                        // Fallback to client-side calculation
-                        const overdueCount = requests.filter(r => 
-                          new Date(r.created_at) < new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
-                        ).length;
-                        alert(`Generated ${overdueCount} compliance alerts for overdue requests`);
-                      }
+                      const response = await financeAPI.generateAlerts();
+                      alert(`Generated ${response.data.alerts_created} compliance alerts`);
                     } catch (error) {
                       console.error('Error generating alerts:', error);
                       // Fallback to client-side calculation

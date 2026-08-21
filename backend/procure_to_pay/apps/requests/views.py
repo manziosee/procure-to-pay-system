@@ -1,3 +1,4 @@
+import logging
 from rest_framework import generics, status
 from rest_framework.decorators import action
 from django.http import HttpResponse, Http404
@@ -13,6 +14,8 @@ from .models import PurchaseRequest, Approval, RequestItem
 from .serializers import PurchaseRequestSerializer, RequestItemSerializer
 from .permissions import CanApproveRequest, CanUpdateRequest, CanDeleteRequest
 from ..documents.services import DocumentProcessor
+
+logger = logging.getLogger(__name__)
 
 @extend_schema_view(
     list=extend_schema(description="List purchase requests (filtered by user role)", tags=['Purchase Requests']),
@@ -100,7 +103,17 @@ class PurchaseRequestViewSet(ModelViewSet):
                           status=status.HTTP_400_BAD_REQUEST)
         
         comments = request.data.get('comments', '').strip()
-        
+
+        if approved and request.user.role == 'approver_level_2':
+            level_1_approved = purchase_request.approvals.filter(
+                approver__role='approver_level_1', approved=True
+            ).exists()
+            if not level_1_approved:
+                return Response(
+                    {'error': 'Level 1 approval is required before Level 2 can approve'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
         approval, created = Approval.objects.get_or_create(
             request=purchase_request,
             approver=request.user,
@@ -136,10 +149,10 @@ class PurchaseRequestViewSet(ModelViewSet):
                     po_file = po_generator.generate_po(purchase_request)
                     purchase_request.purchase_order = po_file
                     purchase_request.save()
-                    print(f"PO generated successfully for request {purchase_request.id}")
-                except Exception as e:
-                    print(f"PO generation failed for request {purchase_request.id}: {e}")
-                    # Log error but don't fail the approval
+                    logger.info(f"PO generated successfully for request {purchase_request.id}")
+                except Exception:
+                    logger.exception(f"PO generation failed for request {purchase_request.id}")
+                    # Don't fail the approval if PO generation fails
         
         return Response({
             'message': f'Request {"approved" if approved else "rejected"} successfully',
@@ -160,16 +173,15 @@ class PurchaseRequestViewSet(ModelViewSet):
             try:
                 uploaded_file = request.FILES['proforma']
                 proforma_data = processor.process_proforma(uploaded_file)
-                
+
                 # Store extracted data
                 if hasattr(request, '_mutable'):
                     request.data._mutable = True
                 request.data['proforma_data'] = proforma_data
-                
-            except Exception as e:
-                print(f"Proforma processing failed: {e}")
-                pass
-        
+
+            except Exception:
+                logger.exception("Proforma processing failed during update")
+
         response = super().update(request, *args, **kwargs)
         
         # Store file content and update items after update
@@ -190,14 +202,7 @@ class PurchaseRequestViewSet(ModelViewSet):
                     
                     # Create new items from AI extraction
                     items_data = instance.proforma_data.get('items', [])
-                    
-                    # If no items extracted, create fallback items
-                    if not items_data:
-                        items_data = [
-                            {'name': 'Office Chair', 'quantity': 2, 'unit_price': '75000'},
-                            {'name': 'Desk Lamp', 'quantity': 5, 'unit_price': '15000'},
-                            {'name': 'Filing Cabinet', 'quantity': 1, 'unit_price': '120000'}
-                        ]
+
                     for item_data in items_data:
                         try:
                             RequestItem.objects.create(
@@ -206,18 +211,18 @@ class PurchaseRequestViewSet(ModelViewSet):
                                 quantity=int(item_data.get('quantity', 1)),
                                 unit_price=float(str(item_data.get('unit_price', '0')).replace(',', ''))
                             )
-                        except (ValueError, TypeError) as e:
-                            print(f"Failed to create item {item_data}: {e}")
+                        except (ValueError, TypeError):
+                            logger.warning(f"Failed to create item from extracted data: {item_data}")
                             continue
-                
+
                 instance.save()
-                
+
                 # Update response with items
                 updated_serializer = self.get_serializer(instance)
                 response.data = updated_serializer.data
-                
-            except Exception as e:
-                print(f"Failed to update proforma data: {e}")
+
+            except Exception:
+                logger.exception("Failed to update proforma data")
         
         return response
     
@@ -233,11 +238,10 @@ class PurchaseRequestViewSet(ModelViewSet):
                 if hasattr(request, '_mutable'):
                     request.data._mutable = True
                 request.data['proforma_data'] = proforma_data
-                
-            except Exception as e:
-                print(f"Proforma processing failed: {e}")
-                pass
-        
+
+            except Exception:
+                logger.exception("Proforma processing failed during create")
+
         response = super().create(request, *args, **kwargs)
         
         # Store file content and create items after creation
@@ -264,18 +268,18 @@ class PurchaseRequestViewSet(ModelViewSet):
                                 quantity=int(item_data.get('quantity', 1)),
                                 unit_price=float(str(item_data.get('unit_price', '0')).replace(',', ''))
                             )
-                        except (ValueError, TypeError) as e:
-                            print(f"Failed to create item {item_data}: {e}")
+                        except (ValueError, TypeError):
+                            logger.warning(f"Failed to create item from extracted data: {item_data}")
                             continue
-                
+
                 purchase_request.save()
-                
+
                 # Update response with items
                 updated_serializer = self.get_serializer(purchase_request)
                 response.data = updated_serializer.data
-                
-            except Exception as e:
-                print(f"Failed to process proforma data: {e}")
+
+            except Exception:
+                logger.exception("Failed to process proforma data")
         
         return response
     
@@ -355,8 +359,8 @@ class PurchaseRequestViewSet(ModelViewSet):
                         unit_price=float(str(item_data.get('unit_price', '0')).replace(',', ''))
                     )
                     created_items.append(item)
-                except (ValueError, TypeError) as e:
-                    print(f"Failed to create item {item_data}: {e}")
+                except (ValueError, TypeError):
+                    logger.warning(f"Failed to create item from extracted data: {item_data}")
                     continue
             
             purchase_request.save()

@@ -85,53 +85,24 @@ export default function CreateRequest() {
       };
       
       console.log('Sending request to API...');
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'https://procure-to-pay-system-xnwp.onrender.com/api'}/requests/`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify(requestData)
-      });
-      
-      if (!response.ok) {
-        const errorData = await response.json();
-        console.error('Backend error:', errorData);
-        throw new Error(JSON.stringify(errorData));
-      }
-      
-      const createdRequest = await response.json();
-      
+      const response = await purchaseRequests.create(requestData);
+      const createdRequest = response.data;
+
       // If there's a proforma file, upload it separately
       if (data.proforma) {
         console.log('Uploading proforma file...');
         try {
           const fileFormData = new FormData();
           fileFormData.append('proforma', data.proforma);
-          
-          const fileResponse = await fetch(`${import.meta.env.VITE_API_URL || 'https://procure-to-pay-system-xnwp.onrender.com/api'}/requests/${createdRequest.id}/`, {
-            method: 'PATCH',
-            headers: {
-              'Authorization': `Bearer ${localStorage.getItem('token')}`
-              // Don't set Content-Type for FormData, let browser set it
-            },
-            body: fileFormData
-          });
-          
-          if (!fileResponse.ok) {
-            const fileError = await fileResponse.json();
-            console.error('File upload error:', fileError);
-            alert('Request created but proforma upload failed. You can upload it later by editing the request.');
-          } else {
-            console.log('Proforma uploaded successfully');
-          }
+          await purchaseRequests.partialUpdate(createdRequest.id, fileFormData);
+          console.log('Proforma uploaded successfully');
         } catch (fileError) {
           console.error('File upload error:', fileError);
           alert('Request created but proforma upload failed. You can upload it later by editing the request.');
         }
       }
-      
-      console.log('Request created successfully:', response);
+
+      console.log('Request created successfully:', createdRequest);
       alert('Purchase request created successfully!');
       navigate('/');
     } catch (error: any) {

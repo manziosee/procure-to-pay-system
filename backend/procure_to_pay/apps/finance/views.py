@@ -163,9 +163,28 @@ class ComplianceAlertViewSet(viewsets.ModelViewSet):
         
         requests = PurchaseRequest.objects.all()
         total_value = requests.aggregate(Sum('amount'))['amount__sum'] or 0
-        
+        request_count = requests.count()
+
+        now = timezone.now()
+        current_month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        last_month_start = (current_month_start - timedelta(days=1)).replace(day=1)
+
+        current_month_value = requests.filter(
+            created_at__gte=current_month_start
+        ).aggregate(Sum('amount'))['amount__sum'] or 0
+        last_month_value = requests.filter(
+            created_at__gte=last_month_start, created_at__lt=current_month_start
+        ).aggregate(Sum('amount'))['amount__sum'] or 0
+
+        if last_month_value > 0:
+            monthly_growth = ((current_month_value - last_month_value) / last_month_value) * 100
+        elif current_month_value > 0:
+            monthly_growth = 100
+        else:
+            monthly_growth = 0
+
         stats = {
-            'total_requests': requests.count(),
+            'total_requests': request_count,
             'total_value': float(total_value),
             'pending_requests': requests.filter(status='pending').count(),
             'approved_requests': requests.filter(status='approved').count(),
@@ -173,8 +192,8 @@ class ComplianceAlertViewSet(viewsets.ModelViewSet):
             'high_value_requests': requests.filter(amount__gt=100000).count(),
             'total_alerts': ComplianceAlert.objects.count(),
             'active_alerts': ComplianceAlert.objects.filter(is_active=True).count(),
-            'avg_request_value': float(total_value / requests.count()) if requests.count() > 0 else 0,
-            'monthly_growth': 12.5  # Mock data - replace with real calculation
+            'avg_request_value': float(total_value / request_count) if request_count > 0 else 0,
+            'monthly_growth': round(float(monthly_growth), 1)
         }
-        
+
         return Response(stats)
