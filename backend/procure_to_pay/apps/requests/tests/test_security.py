@@ -15,13 +15,13 @@ class SecurityTest(TestCase):
     def setUp(self):
         self.client = APIClient()
         self.staff_user = User.objects.create_user(
-            username='staff1', password='test123', role='staff'
+            username='staff1', email='staff1@example.com', password='test123', role='staff'
         )
 
     def get_jwt_token(self, user):
         """Get JWT token for user"""
         response = self.client.post('/api/auth/login/', {
-            'username': user.username,
+            'email': user.email,
             'password': 'test123'
         })
         return response.data['access']
@@ -108,7 +108,7 @@ class SecurityTest(TestCase):
     def test_role_based_access_control(self):
         """Test role-based access control"""
         approver = User.objects.create_user(
-            username='approver1', password='test123', role='approver_level_1'
+            username='approver1', email='approver1@example.com', password='test123', role='approver_level_1'
         )
         
         # Approver should not be able to create requests
@@ -126,21 +126,30 @@ class SecurityTest(TestCase):
 
     def test_path_traversal_prevention(self):
         """Test path traversal prevention in filenames"""
-        malicious_filenames = [
+        from ..validators import SecureFilenameValidator
+        validator = SecureFilenameValidator()
+
+        # Django's own UploadedFile.name setter already strips forward-slash path
+        # components down to a bare basename, so these never reach our validator
+        # with anything dangerous left in them - verify they come out safe.
+        safe_after_django_sanitization = [
             '../../../etc/passwd',
-            '..\\..\\windows\\system32\\config\\sam',
             '/etc/passwd',
-            'C:\\windows\\system32\\config\\sam'
         ]
-        
-        for filename in malicious_filenames:
-            malicious_file = SimpleUploadedFile(
-                filename, b'content', content_type="application/pdf"
-            )
-            
+        for filename in safe_after_django_sanitization:
+            safe_file = SimpleUploadedFile(filename, b'content', content_type="application/pdf")
+            self.assertNotIn('/', safe_file.name)
+            validator(safe_file)  # should not raise - name is already just a basename
+
+        # Backslash-style (Windows) traversal isn't touched by Django's own
+        # sanitization on this platform, so our validator must catch it itself.
+        still_dangerous = [
+            '..\\..\\windows\\system32\\config\\sam',
+            'C:\\windows\\system32\\config\\sam',
+        ]
+        for filename in still_dangerous:
+            malicious_file = SimpleUploadedFile(filename, b'content', content_type="application/pdf")
             with self.assertRaises(ValidationError):
-                from ..validators import SecureFilenameValidator
-                validator = SecureFilenameValidator()
                 validator(malicious_file)
 
     def test_csrf_protection(self):
