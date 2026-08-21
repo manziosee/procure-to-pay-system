@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { auth as authAPI, getAccessToken } from '@/services/api';
 
 export const SessionMonitor = () => {
   const { user, logout } = useAuth();
@@ -7,27 +8,28 @@ export const SessionMonitor = () => {
   useEffect(() => {
     if (!user) return;
 
-    const checkSession = () => {
-      const token = localStorage.getItem('token');
+    const checkSession = async () => {
+      const token = getAccessToken();
       const loginTime = localStorage.getItem('loginTime');
-      
-      // Check if token exists and is not expired
-      if (!token) {
-        logout();
-        return;
-      }
 
-      try {
-        const payload = JSON.parse(atob(token.split('.')[1]));
-        const isExpired = payload.exp * 1000 < Date.now();
-        
-        if (isExpired) {
+      const isExpired = (t: string) => {
+        try {
+          const payload = JSON.parse(atob(t.split('.')[1]));
+          return payload.exp * 1000 < Date.now();
+        } catch {
+          return true;
+        }
+      };
+
+      // Access token lives in memory and expires quickly (15 min) - try to silently
+      // refresh it via the httpOnly cookie before giving up on the session.
+      if (!token || isExpired(token)) {
+        try {
+          await authAPI.refreshToken();
+        } catch {
           logout();
           return;
         }
-      } catch {
-        logout();
-        return;
       }
 
       // Check if session is older than 24 hours (additional security)
@@ -62,10 +64,8 @@ export const SessionMonitor = () => {
 
     // Check session on storage changes (handles multiple tab scenarios)
     const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === 'token' || e.key === 'currentUser') {
-        if (!e.newValue) {
-          logout();
-        }
+      if (e.key === 'currentUser' && !e.newValue) {
+        logout();
       }
     };
 

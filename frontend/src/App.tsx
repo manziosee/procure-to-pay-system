@@ -1,6 +1,7 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { Component, ReactNode, useEffect } from 'react';
 import { useAuth } from './contexts/AuthContext';
+import { getAccessToken } from './services/api';
 import Landing from './pages/Landing';
 import Login from './pages/Login';
 import Register from './pages/Register';
@@ -57,7 +58,7 @@ function App() {
 
   // Auto-logout on route changes if session invalid
   useEffect(() => {
-    const token = localStorage.getItem('token');
+    const token = getAccessToken();
     if (user && (!token || isTokenExpired(token))) {
       window.location.href = '/login';
     }
