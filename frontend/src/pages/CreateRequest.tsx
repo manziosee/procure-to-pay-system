@@ -350,7 +350,7 @@ export default function CreateRequest() {
               >
                 Cancel
               </Button>
-              <Button type="submit" disabled={isSubmitting} className="bg-black hover:bg-gray-800 text-white shadow-lg transition-all duration-300 hover:scale-105">
+              <Button type="submit" disabled={isSubmitting}>
                 {isSubmitting ? 'Creating...' : 'Create Request'}
               </Button>
             </div>

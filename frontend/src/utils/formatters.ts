@@ -2,10 +2,13 @@ import type { RequestStatus, UserRole, ApprovalLevel } from '../types/enums';
 
 export const formatCurrency = (amount: string | number): string => {
   const num = typeof amount === 'string' ? parseFloat(amount) : amount;
-  return new Intl.NumberFormat('en-RW', {
-    style: 'currency',
-    currency: 'RWF',
+  // Intl's RWF currency symbol resolves to "RF" in some browsers/locale data —
+  // format the number plainly and append "RWF" ourselves so it's consistent everywhere.
+  const formatted = new Intl.NumberFormat('en-RW', {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
   }).format(num);
+  return `RWF ${formatted}`;
 };
 
 export const formatDate = (date: string | Date): string => {

@@ -23,13 +23,13 @@ export default function Navbar() {
   };
 
   return (
-    <nav className="border-b border-payhawk-gray bg-payhawk-dark">
+    <nav className="border-b border-gray-800 bg-black">
       <div className="container mx-auto px-4">
         <div className="flex h-16 items-center justify-between">
           <div className="flex items-center gap-6">
             <div className="transform transition-transform duration-300 hover:scale-105">
               <Link to="/">
-                <LogoWithText size="md" />
+                <LogoWithText size="md" variant="light" />
               </Link>
             </div>
             
@@ -37,7 +37,7 @@ export default function Navbar() {
             <nav className="hidden md:flex items-center gap-4">
               <Link 
                 to="/" 
-                className="text-sm text-gray-300 hover:text-payhawk-green transition-colors duration-300"
+                className="text-sm text-gray-300 hover:text-white transition-colors duration-300"
               >
                 Dashboard
               </Link>
@@ -45,7 +45,7 @@ export default function Navbar() {
               {user?.role === 'staff' && (
                 <Link 
                   to="/requests/new" 
-                  className="text-sm text-gray-300 hover:text-payhawk-green transition-colors duration-300"
+                  className="text-sm text-gray-300 hover:text-white transition-colors duration-300"
                 >
                   New Request
                 </Link>
@@ -56,7 +56,7 @@ export default function Navbar() {
               {user?.role?.includes('approver') && (
                 <Link 
                   to="/approvals" 
-                  className="text-sm text-gray-300 hover:text-payhawk-green transition-colors duration-300"
+                  className="text-sm text-gray-300 hover:text-white transition-colors duration-300"
                 >
                   Approvals
                 </Link>
@@ -65,7 +65,7 @@ export default function Navbar() {
               {user?.role === 'finance' && (
                 <Link 
                   to="/finance" 
-                  className="text-sm text-gray-300 hover:text-payhawk-green transition-colors duration-300"
+                  className="text-sm text-gray-300 hover:text-white transition-colors duration-300"
                 >
                   Finance
                 </Link>
@@ -75,22 +75,22 @@ export default function Navbar() {
           </div>
 
           <div className="flex items-center gap-4">
-            <Button variant="outline" onClick={logout} className="border-payhawk-green text-payhawk-green hover:bg-payhawk-green hover:text-payhawk-darker transition-all duration-300 hover:scale-105">
+            <Button variant="outline" onClick={logout} className="border-gray-600 text-gray-200 hover:bg-white hover:text-black transition-all duration-300 hover:scale-105">
               <LogOut className="mr-2 h-4 w-4" />
               Logout
             </Button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="relative h-10 w-10 rounded-full hover:bg-payhawk-gray transition-all duration-300 hover:scale-110">
+                <Button variant="ghost" className="relative h-10 w-10 rounded-full hover:bg-gray-800 transition-all duration-300 hover:scale-110">
                   <Avatar>
-                    <AvatarFallback className="bg-payhawk-green text-payhawk-darker">{getInitials()}</AvatarFallback>
+                    <AvatarFallback className="bg-white text-black">{getInitials()}</AvatarFallback>
                   </Avatar>
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56 bg-white border-gray-200">
                 <DropdownMenuLabel>
                   <div className="flex flex-col space-y-1">
-                    <p className="text-sm font-medium text-payhawk-dark">
+                    <p className="text-sm font-medium text-black">
                       {user?.first_name} {user?.last_name}
                     </p>
                     <p className="text-xs text-gray-600">

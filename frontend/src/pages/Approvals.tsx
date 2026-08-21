@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Eye, CheckCircle, XCircle, Filter } from 'lucide-react';
+import { Eye, CheckCircle, XCircle, Filter, Clock, FileCheck } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { PurchaseRequest } from '@/types';
 import { formatCurrency, formatDate } from '@/utils/formatters';
-import { Badge } from '@/components/ui/badge';
+import { StatusBadge } from '@/components/StatusBadge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -21,58 +21,6 @@ import {
   TableRow,
 } from '@/components/ui/table';
 
-// Mock data for approvals
-const mockRequests: PurchaseRequest[] = [
-  {
-    id: 1,
-    title: 'Office Supplies',
-    description: 'Pens, papers, and other office supplies',
-    amount: '250.00',
-    status: 'pending',
-    created_by: 1,
-    created_by_name: 'John Staff',
-    created_at: '2024-01-15T10:00:00Z',
-    updated_at: '2024-01-15T10:00:00Z',
-    approvals: []
-  },
-  {
-    id: 2,
-    title: 'Laptop Computer',
-    description: 'Dell Laptop for new employee',
-    amount: '1200.00',
-    status: 'pending',
-    created_by: 1,
-    created_by_name: 'John Staff',
-    created_at: '2024-01-10T09:00:00Z',
-    updated_at: '2024-01-12T14:00:00Z',
-    approvals: []
-  },
-  {
-    id: 3,
-    title: 'Software License',
-    description: 'Adobe Creative Suite license',
-    amount: '600.00',
-    status: 'approved',
-    created_by: 1,
-    created_by_name: 'John Staff',
-    created_at: '2024-01-08T11:00:00Z',
-    updated_at: '2024-01-09T16:00:00Z',
-    approvals: []
-  },
-  {
-    id: 4,
-    title: 'Marketing Materials',
-    description: 'Brochures and business cards',
-    amount: '150.00',
-    status: 'rejected',
-    created_by: 1,
-    created_by_name: 'John Staff',
-    created_at: '2024-01-05T14:00:00Z',
-    updated_at: '2024-01-06T10:00:00Z',
-    approvals: []
-  }
-];
-
 export default function Approvals() {
   const { user } = useAuth();
   const { requests: allRequests, isLoading, loadRequests } = useRequestsSync();
@@ -87,12 +35,18 @@ export default function Approvals() {
     setRequests(allRequests);
   }, [allRequests]);
 
+  const [selectedRequest, setSelectedRequest] = useState<PurchaseRequest | null>(null);
+  const [rejectReason, setRejectReason] = useState('');
+  const [approveDialogOpen, setApproveDialogOpen] = useState(false);
+  const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
+  const [approveComments, setApproveComments] = useState('');
+
   // Check if user is an approver
   if (!user?.role?.includes('approver')) {
     return (
       <div className="text-center py-12">
         <p className="text-gray-600 mb-4">Access denied. Approver role required.</p>
-        <Button asChild className="bg-black text-white hover:bg-gray-800">
+        <Button asChild>
           <Link to="/">Back to Dashboard</Link>
         </Button>
       </div>
@@ -101,79 +55,41 @@ export default function Approvals() {
 
   // Filter requests based on approver's individual actions
   const pendingRequests = requests.filter(req => {
-    const userApproval = req.approvals?.find(approval => 
+    const userApproval = req.approvals?.find(approval =>
       approval.approver === user?.id || approval.approver_id === user?.id
     );
     return !userApproval && req.status === 'pending';
   });
-  
+
   const reviewedRequests = requests.filter(req => {
-    const userApproval = req.approvals?.find(approval => 
+    const userApproval = req.approvals?.find(approval =>
       approval.approver === user?.id || approval.approver_id === user?.id
     );
     return userApproval !== undefined;
   });
-  
+
   const approvedByUser = reviewedRequests.filter(req => {
-    const userApproval = req.approvals?.find(approval => 
+    const userApproval = req.approvals?.find(approval =>
       approval.approver === user?.id || approval.approver_id === user?.id
     );
     return userApproval?.approved === true;
   });
-  
+
   const rejectedByUser = reviewedRequests.filter(req => {
-    const userApproval = req.approvals?.find(approval => 
+    const userApproval = req.approvals?.find(approval =>
       approval.approver === user?.id || approval.approver_id === user?.id
     );
     return userApproval?.approved === false;
   });
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'pending': 
-        return (
-          <Badge className="bg-yellow-100 text-yellow-800 border border-yellow-300 font-semibold px-3 py-1">
-            🕐 PENDING
-          </Badge>
-        );
-      case 'approved': 
-        return (
-          <Badge className="bg-green-100 text-green-800 border border-green-300 font-semibold px-3 py-1">
-            ✅ APPROVED
-          </Badge>
-        );
-      case 'rejected': 
-        return (
-          <Badge className="bg-red-100 text-red-800 border border-red-300 font-semibold px-3 py-1">
-            ❌ REJECTED
-          </Badge>
-        );
-      default: 
-        return (
-          <Badge className="bg-gray-100 text-gray-800 border border-gray-300 font-semibold px-3 py-1">
-            {status.toUpperCase()}
-          </Badge>
-        );
-    }
-  };
-
-  const [selectedRequest, setSelectedRequest] = useState<PurchaseRequest | null>(null);
-  const [rejectReason, setRejectReason] = useState('');
-  const [approveDialogOpen, setApproveDialogOpen] = useState(false);
-  const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
-
-  const [approveComments, setApproveComments] = useState('');
-
   const handleApprove = async (request: PurchaseRequest) => {
     try {
       const { purchaseRequests } = await import('@/services/api');
       await purchaseRequests.approve(request.id.toString(), approveComments);
-      alert('Request approved successfully!');
       setApproveDialogOpen(false);
       setSelectedRequest(null);
       setApproveComments('');
-      // Reload requests
-      window.location.reload();
+      await loadRequests();
     } catch (error) {
       console.error('Error approving request:', error);
       alert('Failed to approve request');
@@ -188,12 +104,10 @@ export default function Approvals() {
     try {
       const { purchaseRequests } = await import('@/services/api');
       await purchaseRequests.reject(request.id.toString(), rejectReason);
-      alert('Request rejected successfully!');
       setRejectDialogOpen(false);
       setSelectedRequest(null);
       setRejectReason('');
-      // Reload requests
-      window.location.reload();
+      await loadRequests();
     } catch (error) {
       console.error('Error rejecting request:', error);
       alert('Failed to reject request');
@@ -205,27 +119,27 @@ export default function Approvals() {
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead className="text-black">Title</TableHead>
-            <TableHead className="text-black">Amount</TableHead>
-            <TableHead className="text-black">Status</TableHead>
-            <TableHead className="text-black">Created By</TableHead>
-            <TableHead className="text-black">Created At</TableHead>
-            <TableHead className="text-right text-black">Actions</TableHead>
+            <TableHead>Title</TableHead>
+            <TableHead>Amount</TableHead>
+            <TableHead>Status</TableHead>
+            <TableHead>Created By</TableHead>
+            <TableHead>Created At</TableHead>
+            <TableHead className="text-right">Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {requests.map((request) => (
-            <TableRow key={request.id} className="hover:bg-gray-50 transition-colors duration-200">
+            <TableRow key={request.id}>
               <TableCell className="font-medium text-black">{request.title}</TableCell>
               <TableCell className="text-black">{formatCurrency(request.amount)}</TableCell>
               <TableCell>
-                {getStatusBadge(request.status)}
+                <StatusBadge status={request.status as 'pending' | 'approved' | 'rejected'} />
               </TableCell>
-              <TableCell className="text-black">{request.created_by_name}</TableCell>
-              <TableCell className="text-black">{formatDate(request.created_at)}</TableCell>
+              <TableCell>{request.created_by_name}</TableCell>
+              <TableCell>{formatDate(request.created_at)}</TableCell>
               <TableCell className="text-right">
                 <div className="flex justify-end gap-2">
-                  <Button asChild variant="ghost" size="sm" className="hover:bg-gray-100">
+                  <Button asChild variant="ghost" size="sm">
                     <Link to={`/requests/${request.id}`}>
                       <Eye className="mr-2 h-4 w-4" />
                       View
@@ -235,96 +149,87 @@ export default function Approvals() {
                     <>
                       <Dialog open={approveDialogOpen} onOpenChange={setApproveDialogOpen}>
                         <DialogTrigger asChild>
-                          <Button 
-                            size="sm" 
-                            className="bg-green-600 text-white hover:bg-green-700 transition-all duration-300 hover:scale-105"
+                          <Button
+                            size="sm"
                             onClick={() => setSelectedRequest(request)}
                           >
                             <CheckCircle className="mr-1 h-4 w-4" />
                             Approve
                           </Button>
                         </DialogTrigger>
-                        <DialogContent className="bg-white border border-gray-300 shadow-xl max-w-md mx-auto">
-                          <div className="bg-white p-6 rounded-lg">
-                            <DialogHeader>
-                              <DialogTitle className="text-black text-xl font-semibold">Approve Request</DialogTitle>
-                              <DialogDescription className="text-gray-600 mt-2">
-                                Approve "{selectedRequest?.title}" and provide comments for the team.
-                              </DialogDescription>
-                            </DialogHeader>
-                            <div className="space-y-3 mt-4">
-                              <Label htmlFor="approve-comments" className="text-black font-medium">Approval Comments (Optional)</Label>
-                              <Textarea
-                                id="approve-comments"
-                                placeholder="Add comments about why this request is approved..."
-                                value={approveComments}
-                                onChange={(e) => setApproveComments(e.target.value)}
-                                className="border-gray-300 focus:border-green-500 focus:ring-green-500 bg-white min-h-[80px]"
-                              />
-                            </div>
-                            <DialogFooter className="mt-6 flex gap-3">
-                              <Button variant="outline" onClick={() => {
-                                setApproveDialogOpen(false);
-                                setApproveComments('');
-                              }} className="border-gray-300">
-                                Cancel
-                              </Button>
-                              <Button 
-                                className="bg-green-600 text-white hover:bg-green-700"
-                                onClick={() => selectedRequest && handleApprove(selectedRequest)}
-                              >
-                                Approve
-                              </Button>
-                            </DialogFooter>
+                        <DialogContent className="bg-white border-gray-200 max-w-md mx-auto">
+                          <DialogHeader>
+                            <DialogTitle className="text-black text-xl font-semibold">Approve Request</DialogTitle>
+                            <DialogDescription className="text-gray-600 mt-2">
+                              Approve "{selectedRequest?.title}" and provide comments for the team.
+                            </DialogDescription>
+                          </DialogHeader>
+                          <div className="space-y-3 mt-4">
+                            <Label htmlFor="approve-comments">Approval Comments (Optional)</Label>
+                            <Textarea
+                              id="approve-comments"
+                              placeholder="Add comments about why this request is approved..."
+                              value={approveComments}
+                              onChange={(e) => setApproveComments(e.target.value)}
+                              className="min-h-[80px]"
+                            />
                           </div>
+                          <DialogFooter className="mt-6 flex gap-3">
+                            <Button variant="outline" onClick={() => {
+                              setApproveDialogOpen(false);
+                              setApproveComments('');
+                            }}>
+                              Cancel
+                            </Button>
+                            <Button onClick={() => selectedRequest && handleApprove(selectedRequest)}>
+                              Approve
+                            </Button>
+                          </DialogFooter>
                         </DialogContent>
                       </Dialog>
 
                       <Dialog open={rejectDialogOpen} onOpenChange={setRejectDialogOpen}>
                         <DialogTrigger asChild>
-                          <Button 
-                            size="sm" 
-                            className="bg-red-600 text-white hover:bg-red-700 border-2 border-red-600 hover:border-red-700 shadow-lg font-bold px-4 py-2 rounded transition-all duration-300 hover:scale-105"
+                          <Button
+                            size="sm"
+                            variant="destructive"
                             onClick={() => setSelectedRequest(request)}
                           >
                             <XCircle className="mr-1 h-4 w-4" />
                             Reject
                           </Button>
                         </DialogTrigger>
-                        <DialogContent className="bg-white border border-gray-300 shadow-xl max-w-md mx-auto">
-                          <div className="bg-white p-6 rounded-lg">
-                            <DialogHeader>
-                              <DialogTitle className="text-black text-xl font-semibold">Reject Request</DialogTitle>
-                              <DialogDescription className="text-gray-600 mt-2">
-                                Please provide a reason for rejecting "{selectedRequest?.title}".
-                              </DialogDescription>
-                            </DialogHeader>
-                            <div className="space-y-3 mt-4">
-                              <Label htmlFor="reason" className="text-black font-medium">Reason for rejection</Label>
-                              <Textarea
-                                id="reason"
-                                placeholder="Enter reason for rejection..."
-                                value={rejectReason}
-                                onChange={(e) => setRejectReason(e.target.value)}
-                                className="border-gray-300 focus:border-black focus:ring-black bg-white min-h-[100px]"
-                              />
-                            </div>
-                            <DialogFooter className="mt-6 flex gap-3">
-                              <Button variant="outline" onClick={() => {
-                                setRejectDialogOpen(false);
-                                setRejectReason('');
-                              }} className="border-gray-300">
-                                Cancel
-                              </Button>
-                              <Button 
-                                variant="destructive"
-                                onClick={() => selectedRequest && handleReject(selectedRequest)}
-                                className="bg-red-600 hover:bg-red-700"
-                              >
-                                Reject
-                              </Button>
-                            </DialogFooter>
+                        <DialogContent className="bg-white border-gray-200 max-w-md mx-auto">
+                          <DialogHeader>
+                            <DialogTitle className="text-black text-xl font-semibold">Reject Request</DialogTitle>
+                            <DialogDescription className="text-gray-600 mt-2">
+                              Please provide a reason for rejecting "{selectedRequest?.title}".
+                            </DialogDescription>
+                          </DialogHeader>
+                          <div className="space-y-3 mt-4">
+                            <Label htmlFor="reason">Reason for rejection</Label>
+                            <Textarea
+                              id="reason"
+                              placeholder="Enter reason for rejection..."
+                              value={rejectReason}
+                              onChange={(e) => setRejectReason(e.target.value)}
+                              className="min-h-[100px]"
+                            />
                           </div>
+                          <DialogFooter className="mt-6 flex gap-3">
+                            <Button variant="outline" onClick={() => {
+                              setRejectDialogOpen(false);
+                              setRejectReason('');
+                            }}>
+                              Cancel
+                            </Button>
+                            <Button
+                              variant="destructive"
+                              onClick={() => selectedRequest && handleReject(selectedRequest)}
+                            >
+                              Reject
+                            </Button>
+                          </DialogFooter>
                         </DialogContent>
                       </Dialog>
                     </>
@@ -350,13 +255,13 @@ export default function Approvals() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-black">Approvals</h1>
+          <h1 className="font-display text-3xl font-bold text-black">Approvals</h1>
           <p className="text-gray-600">
-            Manage purchase request approvals - {user.role.replace('_', ' ').toUpperCase()}
+            Manage purchase request approvals — {user.role.replace('_', ' ').toUpperCase()}
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Filter className="h-5 w-5 text-gray-600" />
+          <Filter className="h-4 w-4 text-gray-500" />
           <span className="text-sm text-gray-600">
             {pendingRequests.length} pending approval
           </span>
@@ -365,58 +270,56 @@ export default function Approvals() {
 
       {/* Stats Cards */}
       <div className="grid gap-4 md:grid-cols-3">
-        <Card className="border-yellow-200 bg-gradient-to-br from-yellow-50 to-yellow-100 hover:border-yellow-400 transition-all duration-300 hover:scale-105 transform hover:shadow-xl">
+        <Card className="border-gray-200">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-yellow-800">Pending Approval</CardTitle>
-            <div className="h-8 w-8 bg-yellow-200 rounded-full flex items-center justify-center">
-              🕐
+            <CardTitle className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Pending Approval</CardTitle>
+            <div className="h-8 w-8 bg-gray-100 rounded-full flex items-center justify-center">
+              <Clock className="h-4 w-4 text-gray-700" />
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-yellow-900">{pendingRequests.length}</div>
-            <p className="text-xs text-yellow-700 font-medium">Awaiting your review</p>
+            <div className="text-3xl font-bold text-amber-600">{pendingRequests.length}</div>
+            <p className="text-xs text-gray-500">Awaiting your review</p>
           </CardContent>
         </Card>
 
-        <Card className="border-green-200 bg-gradient-to-br from-green-50 to-green-100 hover:border-green-400 transition-all duration-300 hover:scale-105 transform hover:shadow-xl">
+        <Card className="border-gray-200">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-green-800">Approved</CardTitle>
-            <div className="h-8 w-8 bg-green-200 rounded-full flex items-center justify-center">
-              ✅
+            <CardTitle className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Approved</CardTitle>
+            <div className="h-8 w-8 bg-gray-100 rounded-full flex items-center justify-center">
+              <CheckCircle className="h-4 w-4 text-gray-700" />
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-green-900">
-              {approvedByUser.length}
-            </div>
-            <p className="text-xs text-green-700 font-medium">Successfully approved</p>
+            <div className="text-3xl font-bold text-green-600">{approvedByUser.length}</div>
+            <p className="text-xs text-gray-500">Successfully approved</p>
           </CardContent>
         </Card>
 
-        <Card className="border-red-200 bg-gradient-to-br from-red-50 to-red-100 hover:border-red-400 transition-all duration-300 hover:scale-105 transform hover:shadow-xl">
+        <Card className="border-gray-200">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-red-800">Rejected</CardTitle>
-            <div className="h-8 w-8 bg-red-200 rounded-full flex items-center justify-center">
-              ❌
+            <CardTitle className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Rejected</CardTitle>
+            <div className="h-8 w-8 bg-gray-100 rounded-full flex items-center justify-center">
+              <XCircle className="h-4 w-4 text-gray-700" />
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-red-900">
-              {rejectedByUser.length}
-            </div>
-            <p className="text-xs text-red-700 font-medium">Declined requests</p>
+            <div className="text-3xl font-bold text-destructive">{rejectedByUser.length}</div>
+            <p className="text-xs text-gray-500">Declined requests</p>
           </CardContent>
         </Card>
       </div>
 
       {/* Tabs for different views */}
       <Tabs defaultValue="pending" className="space-y-4">
-        <TabsList className="bg-gray-100 border border-gray-200">
-          <TabsTrigger value="pending" className="data-[state=active]:bg-yellow-500 data-[state=active]:text-white font-semibold">
-            🕐 Pending ({pendingRequests.length})
+        <TabsList>
+          <TabsTrigger value="pending">
+            <Clock className="mr-1.5 h-3.5 w-3.5" />
+            Pending ({pendingRequests.length})
           </TabsTrigger>
-          <TabsTrigger value="reviewed" className="data-[state=active]:bg-black data-[state=active]:text-white font-semibold">
-            📄 Reviewed ({reviewedRequests.length})
+          <TabsTrigger value="reviewed">
+            <FileCheck className="mr-1.5 h-3.5 w-3.5" />
+            Reviewed ({reviewedRequests.length})
           </TabsTrigger>
         </TabsList>
 
