@@ -9,13 +9,13 @@ User = get_user_model()
 class PurchaseRequestModelTest(TestCase):
     def setUp(self):
         self.staff_user = User.objects.create_user(
-            username='staff1', password='test123', role='staff'
+            username='staff1', email='staff1@example.com', password='test123', role='staff'
         )
         self.approver1 = User.objects.create_user(
-            username='approver1', password='test123', role='approver_level_1'
+            username='approver1', email='approver1@example.com', password='test123', role='approver_level_1'
         )
         self.approver2 = User.objects.create_user(
-            username='approver2', password='test123', role='approver_level_2'
+            username='approver2', email='approver2@example.com', password='test123', role='approver_level_2'
         )
 
     def test_create_purchase_request(self):
@@ -96,7 +96,7 @@ class PurchaseRequestModelTest(TestCase):
 class RequestItemModelTest(TestCase):
     def setUp(self):
         self.staff_user = User.objects.create_user(
-            username='staff1', password='test123', role='staff'
+            username='staff1', email='staff1@example.com', password='test123', role='staff'
         )
         self.request = PurchaseRequest.objects.create(
             title='Test Request',

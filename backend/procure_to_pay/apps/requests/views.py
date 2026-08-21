@@ -12,7 +12,7 @@ from django.core.exceptions import ValidationError
 from drf_spectacular.utils import extend_schema, extend_schema_view
 from .models import PurchaseRequest, Approval, RequestItem
 from .serializers import PurchaseRequestSerializer, RequestItemSerializer
-from .permissions import CanApproveRequest, CanUpdateRequest, CanDeleteRequest
+from .permissions import CanCreateRequest, CanApproveRequest, CanUpdateRequest, CanDeleteRequest
 from ..documents.services import DocumentProcessor
 
 logger = logging.getLogger(__name__)
@@ -66,7 +66,9 @@ class PurchaseRequestViewSet(ModelViewSet):
         serializer.save(created_by=self.request.user)
     
     def get_permissions(self):
-        if self.action in ['approve', 'reject']:
+        if self.action == 'create':
+            return [CanCreateRequest()]
+        elif self.action in ['approve', 'reject']:
             return [CanApproveRequest()]
         elif self.action in ['update', 'partial_update']:
             return [CanUpdateRequest()]
@@ -183,10 +185,16 @@ class PurchaseRequestViewSet(ModelViewSet):
                 logger.exception("Proforma processing failed during update")
 
         response = super().update(request, *args, **kwargs)
-        
+
         # Store file content and update items after update
         if response.status_code == 200:
             try:
+                # super().update() saved changes through its own instance fetch, so the
+                # `instance` fetched at the top of this method is now stale - refresh it
+                # before touching it further, otherwise instance.save() below would
+                # silently overwrite the update we just persisted.
+                instance.refresh_from_db()
+
                 # Store file content in database
                 if 'proforma' in request.FILES:
                     uploaded_file = request.FILES['proforma']
@@ -194,9 +202,9 @@ class PurchaseRequestViewSet(ModelViewSet):
                     instance.proforma_content = uploaded_file.read()
                     instance.proforma_filename = uploaded_file.name
                     instance.proforma_content_type = uploaded_file.content_type or 'application/octet-stream'
-                
+
                 # Update RequestItem objects from AI-extracted items
-                if 'proforma' in request.FILES and hasattr(instance, 'proforma_data') and instance.proforma_data:
+                if 'proforma' in request.FILES and instance.proforma_data:
                     # Clear existing items
                     instance.items.all().delete()
                     
@@ -520,7 +528,7 @@ class PurchaseRequestViewSet(ModelViewSet):
         responses={200: None, 403: None, 404: None},
         tags=['Purchase Requests']
     )
-    @action(detail=True, methods=['get'], url_path='download/(?P<doc_type>\w+)')
+    @action(detail=True, methods=['get'], url_path=r'download/(?P<doc_type>\w+)')
     def download_document(self, request, pk=None, doc_type=None):
         purchase_request = self.get_object()
         

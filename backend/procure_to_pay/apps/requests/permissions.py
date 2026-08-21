@@ -1,5 +1,9 @@
 from rest_framework.permissions import BasePermission
 
+class CanCreateRequest(BasePermission):
+    def has_permission(self, request, view):
+        return request.user.role == 'staff'
+
 class CanApproveRequest(BasePermission):
     def has_permission(self, request, view):
         return request.user.role in ['approver_level_1', 'approver_level_2']

@@ -15,22 +15,22 @@ class PurchaseRequestViewSetTest(TestCase):
         
         # Create test users
         self.staff_user = User.objects.create_user(
-            username='staff1', password='test123', role='staff'
+            username='staff1', email='staff1@example.com', password='test123', role='staff'
         )
         self.approver1 = User.objects.create_user(
-            username='approver1', password='test123', role='approver_level_1'
+            username='approver1', email='approver1@example.com', password='test123', role='approver_level_1'
         )
         self.approver2 = User.objects.create_user(
-            username='approver2', password='test123', role='approver_level_2'
+            username='approver2', email='approver2@example.com', password='test123', role='approver_level_2'
         )
         self.finance_user = User.objects.create_user(
-            username='finance1', password='test123', role='finance'
+            username='finance1', email='finance1@example.com', password='test123', role='finance'
         )
 
     def get_jwt_token(self, user):
         """Get JWT token for user"""
         response = self.client.post('/api/auth/login/', {
-            'username': user.username,
+            'email': user.email,
             'password': 'test123'
         })
         return response.data['access']
@@ -117,7 +117,7 @@ class PurchaseRequestViewSetTest(TestCase):
     def test_staff_can_only_see_own_requests(self):
         """Test staff can only see their own requests"""
         other_staff = User.objects.create_user(
-            username='staff2', password='test123', role='staff'
+            username='staff2', email='staff2@example.com', password='test123', role='staff'
         )
         
         # Create requests for both staff
