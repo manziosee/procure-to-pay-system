@@ -2,8 +2,19 @@ import axios, { AxiosInstance, InternalAxiosRequestConfig, AxiosResponse } from 
 
 const API_URL = import.meta.env.VITE_API_URL || 'https://procure-to-pay-backend.fly.dev/api';
 
+// The access token lives in memory only (never localStorage) so an XSS bug can't read it
+// off disk. The refresh token never reaches JS at all - the backend sets it as an
+// httpOnly cookie and /auth/refresh/ reads it server-side.
+let accessToken: string | null = null;
+
+export const getAccessToken = () => accessToken;
+export const setAccessToken = (token: string | null) => {
+  accessToken = token;
+};
+
 const api: AxiosInstance = axios.create({
   baseURL: API_URL,
+  withCredentials: true,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -12,9 +23,8 @@ const api: AxiosInstance = axios.create({
 // Request interceptor to add auth token to requests
 api.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
+    if (accessToken) {
+      config.headers.Authorization = `Bearer ${accessToken}`;
     }
     return config;
   },
@@ -23,38 +33,29 @@ api.interceptors.request.use(
   }
 );
 
+const clearSession = () => {
+  setAccessToken(null);
+  localStorage.removeItem('currentUser');
+  localStorage.removeItem('loginTime');
+};
+
 // Response interceptor for error handling
 api.interceptors.response.use(
   (response: AxiosResponse) => response,
   async (error) => {
     const originalRequest = error.config;
-    
-    if (error.response?.status === 401 && !originalRequest._retry) {
+
+    if (error.response?.status === 401 && !originalRequest._retry && originalRequest.url !== '/auth/refresh/') {
       originalRequest._retry = true;
-      
-      // Try to refresh token
-      const refreshToken = localStorage.getItem('refreshToken');
-      if (refreshToken) {
-        try {
-          const response = await api.post('/auth/refresh/', { refresh: refreshToken });
-          const newToken = response.data.access;
-          localStorage.setItem('token', newToken);
-          originalRequest.headers.Authorization = `Bearer ${newToken}`;
-          return api(originalRequest);
-        } catch (refreshError) {
-          // Refresh failed, clear all auth data and redirect
-          localStorage.removeItem('token');
-          localStorage.removeItem('refreshToken');
-          localStorage.removeItem('currentUser');
-          localStorage.removeItem('loginTime');
-          window.location.href = '/login';
-        }
-      } else {
-        // No refresh token, clear all auth data and redirect
-        localStorage.removeItem('token');
-        localStorage.removeItem('refreshToken');
-        localStorage.removeItem('currentUser');
-        localStorage.removeItem('loginTime');
+
+      try {
+        // Refresh token travels as an httpOnly cookie, so no body is needed here.
+        const response = await api.post('/auth/refresh/');
+        setAccessToken(response.data.access);
+        originalRequest.headers.Authorization = `Bearer ${response.data.access}`;
+        return api(originalRequest);
+      } catch (refreshError) {
+        clearSession();
         window.location.href = '/login';
       }
     }
@@ -64,47 +65,41 @@ api.interceptors.response.use(
 
 // Auth API
 export const auth = {
-  login: (credentials: { email: string; password: string }) => 
+  login: (credentials: { email: string; password: string }) =>
     api.post('/auth/login/', credentials).then((res) => {
       if (res.data.access) {
-        localStorage.setItem('token', res.data.access);
-        if (res.data.refresh) {
-          localStorage.setItem('refreshToken', res.data.refresh);
-        }
+        setAccessToken(res.data.access);
       }
       return res.data;
     }),
 
-  register: (userData: { email: string; password: string; password_confirm: string; first_name: string; last_name: string; role: string; username: string }) => 
+  register: (userData: { email: string; password: string; password_confirm: string; first_name: string; last_name: string; role: string; username: string }) =>
     api.post('/auth/register/', userData),
 
-  refreshToken: (refresh: string) => 
-    api.post('/auth/refresh/', { refresh }),
+  // Refresh token is sent as an httpOnly cookie, not a request body.
+  refreshToken: () => api.post('/auth/refresh/').then((res) => {
+    if (res.data.access) {
+      setAccessToken(res.data.access);
+    }
+    return res.data;
+  }),
 
   getProfile: () => api.get('/auth/profile/'),
 
   logout: () => {
-    const refreshToken = localStorage.getItem('refreshToken');
-    const logoutPromise = refreshToken 
-      ? api.post('/auth/logout/', { refresh: refreshToken })
-      : Promise.resolve();
-    
-    localStorage.removeItem('token');
-    localStorage.removeItem('refreshToken');
-    localStorage.removeItem('currentUser');
-    localStorage.removeItem('loginTime');
+    const logoutPromise = api.post('/auth/logout/');
+    clearSession();
     return logoutPromise;
   }
 };
 
 // Purchase Requests API
 export const purchaseRequests = {
-  // Create a new purchase request with file upload support
-  create: (data: FormData) => api.post('/requests/', data, {
-    headers: {
-      'Content-Type': 'multipart/form-data',
-    },
-  }),
+  // Create a new purchase request (JSON body, or FormData when a file is attached)
+  create: (data: FormData | Record<string, unknown>) => {
+    const headers = data instanceof FormData ? { 'Content-Type': 'multipart/form-data' } : {};
+    return api.post('/requests/', data, { headers });
+  },
 
   // Get all purchase requests with optional query params
   getAll: (params = {}) => api.get('/requests/', { params }),
@@ -192,6 +187,21 @@ export const proforma = {
   }
 };
 
+// Finance API
+export const finance = {
+  uploadDocument: (data: FormData) => api.post('/finance/documents/', data, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  }),
+
+  exportReport: () => api.get('/finance/documents/export_financial_report/', {
+    responseType: 'blob'
+  }),
+
+  generateAlerts: () => api.post('/finance/alerts/generate_alerts/')
+};
+
 // API Root
 export const getApiRoot = () => api.get('/');
 
@@ -201,5 +211,6 @@ export default {
   purchaseRequests,
   documents,
   proforma,
+  finance,
   getApiRoot
 };

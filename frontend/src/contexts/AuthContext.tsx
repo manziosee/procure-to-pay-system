@@ -1,7 +1,7 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import type { User, LoginCredentials } from '@/types';
-import { auth as authAPI } from '@/services/api';
+import { auth as authAPI, getAccessToken } from '@/services/api';
 
 interface AuthContextType {
   user: User | null;
@@ -24,46 +24,6 @@ interface AuthProviderProps {
   children: ReactNode;
 }
 
-// Mock users for demo
-const mockUsers: Record<string, User> = {
-  staff: {
-    id: 1,
-    username: 'staff',
-    email: 'staff@example.com',
-    first_name: 'John',
-    last_name: 'Staff',
-    role: 'staff',
-    department: 'Operations'
-  },
-  approver1: {
-    id: 2,
-    username: 'approver1',
-    email: 'approver1@example.com',
-    first_name: 'Jane',
-    last_name: 'Approver',
-    role: 'approver_level_1',
-    department: 'Management'
-  },
-  approver2: {
-    id: 3,
-    username: 'approver2',
-    email: 'approver2@example.com',
-    first_name: 'Bob',
-    last_name: 'Manager',
-    role: 'approver_level_2',
-    department: 'Management'
-  },
-  finance: {
-    id: 4,
-    username: 'finance',
-    email: 'finance@example.com',
-    first_name: 'Alice',
-    last_name: 'Finance',
-    role: 'finance',
-    department: 'Finance'
-  }
-};
-
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
@@ -78,30 +38,26 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
-  // Validate session on app load and route changes
+  // Validate session on app load. The access token lives only in memory, so a page
+  // reload always starts with none - use the httpOnly refresh cookie to get a fresh
+  // one before trusting the locally cached user profile.
   const validateSession = async () => {
-    const token = localStorage.getItem('token');
     const savedUser = localStorage.getItem('currentUser');
-    
-    if (!token || !savedUser || isTokenExpired(token)) {
-      // Clear invalid session
-      localStorage.removeItem('token');
-      localStorage.removeItem('refreshToken');
-      localStorage.removeItem('currentUser');
+
+    if (!savedUser) {
       setUser(null);
       setLoading(false);
       return;
     }
 
     try {
-      // Verify token with backend
+      await authAPI.refreshToken();
       await authAPI.getProfile();
       setUser(JSON.parse(savedUser));
     } catch (error) {
-      // Token invalid, clear session
-      localStorage.removeItem('token');
-      localStorage.removeItem('refreshToken');
+      // No valid refresh cookie (or backend rejected it), clear the cached session
       localStorage.removeItem('currentUser');
+      localStorage.removeItem('loginTime');
       setUser(null);
     }
     setLoading(false);
@@ -115,7 +71,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible' && user) {
-        const token = localStorage.getItem('token');
+        const token = getAccessToken();
         if (!token || isTokenExpired(token)) {
           logout();
         }
@@ -151,8 +107,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       console.error('Logout error:', error);
     } finally {
       localStorage.removeItem('currentUser');
-      localStorage.removeItem('token');
-      localStorage.removeItem('refreshToken');
       localStorage.removeItem('loginTime');
       setUser(null);
     }

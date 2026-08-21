@@ -1,8 +1,15 @@
+from django.core.exceptions import ImproperlyConfigured
 from .base import *
 import os
 import dj_database_url
 
 DEBUG = False
+
+if SECRET_KEY in ('django-insecure-change-me', 'django-insecure-fly-production-key-change-me'):
+    raise ImproperlyConfigured(
+        'SECRET_KEY is set to an insecure default. Set a real SECRET_KEY environment '
+        'variable before deploying.'
+    )
 
 # Get allowed hosts from environment variable
 ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')

@@ -1,3 +1,4 @@
+import logging
 import pytesseract
 import pdfplumber
 from PIL import Image
@@ -16,30 +17,31 @@ from reportlab.lib.pagesizes import letter
 from io import BytesIO
 # from ...utils.error_handler import ErrorLogger
 
+logger = logging.getLogger(__name__)
+
 class ErrorLogger:
     @staticmethod
     def log_file_processing_error(filename, error):
-        print(f"File processing error for {filename}: {error}")
-    
+        logger.error(f"File processing error for {filename}: {error}")
+
     @staticmethod
     def log_security_event(event_type, user, details):
-        print(f"Security event {event_type} for user {user}: {details}")
+        logger.warning(f"Security event {event_type} for user {user}: {details}")
 
 class DocumentProcessor:
     def __init__(self):
         self.client = None
         api_key = settings.OPENAI_API_KEY
-        print(f"Initializing DocumentProcessor with API key: {api_key[:20] if api_key else 'None'}...")
-        
+
         if api_key and api_key != '<your-openai-api-key>':
             try:
                 self.client = OpenAI(api_key=api_key)
-                print("OpenAI client initialized successfully")
-            except Exception as e:
-                print(f"OpenAI client initialization failed: {e}")
+                logger.info("OpenAI client initialized successfully")
+            except Exception:
+                logger.exception("OpenAI client initialization failed")
                 self.client = None
         else:
-            print("No valid OpenAI API key found - using basic processing")
+            logger.info("No valid OpenAI API key found - using basic processing")
     
     def extract_text_from_image(self, image_path):
         """Extract text from images with enhanced OCR"""
@@ -61,8 +63,8 @@ class DocumentProcessor:
             
             return text
             
-        except Exception as e:
-            print(f"OCR failed for {image_path}: {e}")
+        except Exception:
+            logger.exception(f"OCR failed for {image_path}")
             return ""
     
     def extract_text_from_pdf(self, pdf_path):
@@ -78,8 +80,8 @@ class DocumentProcessor:
             
             if text.strip():
                 return text
-        except Exception as e:
-            print(f"pdfplumber failed: {e}")
+        except Exception:
+            logger.warning("pdfplumber extraction failed", exc_info=True)
         
         try:
             import PyPDF2
@@ -90,9 +92,9 @@ class DocumentProcessor:
             
             if text.strip():
                 return text
-        except Exception as e:
-            print(f"PyPDF2 failed: {e}")
-        
+        except Exception:
+            logger.warning("PyPDF2 extraction failed", exc_info=True)
+
         return text
     
     def process_proforma(self, file_input):
@@ -185,8 +187,8 @@ class DocumentProcessor:
             
             return text.strip()
             
-        except Exception as e:
-            print(f"Text extraction failed for {file_path}: {e}")
+        except Exception:
+            logger.exception(f"Text extraction failed for {file_path}")
             return f"Text extraction failed for file type: {file_ext}"
     
     def _extract_proforma_data(self, text):
@@ -198,14 +200,14 @@ class DocumentProcessor:
     def _ai_extract_proforma(self, text):
         try:
             if not self.client:
-                print("OpenAI client not initialized - falling back to basic extraction")
+                logger.info("OpenAI client not initialized - falling back to basic extraction")
                 return self._basic_extract_proforma(text)
-            
+
             if not text or len(text.strip()) < 10:
                 raise ValueError("Insufficient text content for AI processing")
-            
-            print(f"Attempting AI extraction with text length: {len(text)}")
-            
+
+            logger.debug(f"Attempting AI extraction with text length: {len(text)}")
+
             response = self.client.chat.completions.create(
                 model="gpt-3.5-turbo",
                 messages=[
@@ -226,18 +228,18 @@ IMPORTANT: Use the FINAL TOTAL amount that includes all taxes and fees, NOT the 
             )
             
             content = response.choices[0].message.content.strip()
-            print(f"OpenAI response received: {content[:200]}...")
-            
+            logger.debug(f"OpenAI response received: {content[:200]}...")
+
             # Clean up response
             if content.startswith('```json'):
                 content = content.replace('```json', '').replace('```', '').strip()
             elif content.startswith('```'):
                 content = content.replace('```', '').strip()
-            
+
             # Parse JSON
             extracted_data = json.loads(content)
-            print(f"Successfully parsed AI response")
-            
+            logger.debug("Successfully parsed AI response")
+
             # Ensure required fields
             extracted_data.setdefault('vendor', 'Unknown Vendor')
             extracted_data.setdefault('total_amount', '0.00')
@@ -248,8 +250,7 @@ IMPORTANT: Use the FINAL TOTAL amount that includes all taxes and fees, NOT the 
             return extracted_data
             
         except Exception as e:
-            print(f"AI extraction failed with error: {e}")
-            print(f"Error type: {type(e).__name__}")
+            logger.warning(f"AI extraction failed with error ({type(e).__name__}): {e}", exc_info=True)
             # Return enhanced basic extraction with fallback
             basic_data = self._basic_extract_proforma(text)
             basic_data['confidence'] = 0.4
@@ -358,8 +359,8 @@ IMPORTANT: Use the FINAL TOTAL amount that includes all taxes and fees, NOT the 
             if content.startswith('```json'):
                 content = content.replace('```json', '').replace('```', '').strip()
             return json.loads(content)
-        except Exception as e:
-            print(f"AI extraction failed: {e}")
+        except Exception:
+            logger.warning("AI receipt extraction failed", exc_info=True)
             return self._basic_extract_receipt(text)
     
     def _basic_extract_receipt(self, text):
@@ -720,8 +721,8 @@ IMPORTANT: Use the FINAL TOTAL amount that includes all taxes and fees, NOT the 
                 'terms': proforma_data.get('terms', ''),
                 'total': total
             }
-        except Exception as e:
-            print(f"Error generating PO: {e}")
+        except Exception:
+            logger.exception("Error generating PO")
             return {}
     
     def _calculate_total(self, items):
@@ -807,9 +808,9 @@ IMPORTANT: Use the FINAL TOTAL amount that includes all taxes and fees, NOT the 
                     'image/tiff', 'image/gif', 'text/plain', 'text/csv'
                 ]
                 if mime_type not in allowed_mimes:
-                    print(f"Warning: MIME type {mime_type} not in allowed list, but proceeding...")
-            except Exception as e:
-                print(f"MIME type detection failed: {e}")
+                    logger.warning(f"MIME type {mime_type} not in allowed list, but proceeding")
+            except Exception:
+                logger.warning("MIME type detection failed", exc_info=True)
 
     def _extract_text_file(self, file_path):
         """Extract text from text files with encoding detection"""
@@ -821,8 +822,8 @@ IMPORTANT: Use the FINAL TOTAL amount that includes all taxes and fees, NOT the 
                     return f.read()
             except UnicodeDecodeError:
                 continue
-            except Exception as e:
-                print(f"Error reading text file with {encoding}: {e}")
+            except Exception:
+                logger.warning(f"Error reading text file with {encoding}", exc_info=True)
                 continue
         
         raise ValueError("Could not decode text file with any supported encoding")
@@ -837,8 +838,8 @@ IMPORTANT: Use the FINAL TOTAL amount that includes all taxes and fees, NOT the 
                 for page in reader.pages:
                     text += page.extract_text() + "\n"
             return text
-        except Exception as e:
-            print(f"Alternative PDF extraction failed: {e}")
+        except Exception:
+            logger.warning("Alternative PDF extraction failed", exc_info=True)
             return ""
     
     def _extract_unknown_format(self, file_path):

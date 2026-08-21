@@ -2,10 +2,17 @@
 Fly.io production settings for procure-to-pay system
 """
 import os
+from django.core.exceptions import ImproperlyConfigured
 from .base import *
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = False
+
+if SECRET_KEY in ('django-insecure-change-me', 'django-insecure-fly-production-key-change-me'):
+    raise ImproperlyConfigured(
+        'SECRET_KEY is set to an insecure default. Set a real SECRET_KEY via '
+        '`fly secrets set SECRET_KEY=...` before deploying.'
+    )
 
 ALLOWED_HOSTS = [
     'procure-to-pay-backend.fly.dev',

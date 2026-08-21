@@ -163,10 +163,13 @@ CORS_ALLOWED_ORIGINS = config(
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOW_ALL_ORIGINS = False
 
-CELERY_BROKER_URL = config('REDIS_URL', default='redis://localhost:6379')
-CELERY_RESULT_BACKEND = config('REDIS_URL', default='redis://localhost:6379')
-
 OPENAI_API_KEY = config('OPENAI_API_KEY', default='')
+
+# Refresh token cookie (httpOnly) settings
+REFRESH_TOKEN_COOKIE_NAME = 'refresh_token'
+REFRESH_TOKEN_COOKIE_PATH = '/api/auth/'
+REFRESH_TOKEN_COOKIE_SECURE = not DEBUG
+REFRESH_TOKEN_COOKIE_SAMESITE = 'None' if not DEBUG else 'Lax'
 
 # Logging Configuration
 LOGGING = {
@@ -265,7 +268,12 @@ SPECTACULAR_SETTINGS = {
         'HIDE_DOWNLOAD_BUTTON': False,
         'EXPAND_RESPONSES': 'all',
     },
-    # Ensure Swagger works in production
-    'SERVE_PERMISSIONS': ['rest_framework.permissions.AllowAny'],
+    # Public by default to preserve the live demo (README advertises public Swagger/ReDoc
+    # links). Set SWAGGER_PUBLIC=False in the environment to require authentication instead.
+    'SERVE_PERMISSIONS': (
+        ['rest_framework.permissions.AllowAny']
+        if config('SWAGGER_PUBLIC', default=True, cast=bool)
+        else ['rest_framework.permissions.IsAuthenticated']
+    ),
     'SERVE_AUTHENTICATION': [],
 }

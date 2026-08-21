@@ -1,3 +1,4 @@
+import logging
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
@@ -11,6 +12,8 @@ from .services import DocumentProcessor
 from .models import DocumentProcessing
 from ..requests.security import RateLimiter
 from ...utils.error_handler import ErrorLogger
+
+logger = logging.getLogger(__name__)
 
 @method_decorator(ratelimit(key='user', rate='10/h', method='POST'), name='post')
 class ProcessDocumentView(APIView):
@@ -74,15 +77,13 @@ class ProcessDocumentView(APIView):
         tags=['Documents']
     )
     def post(self, request):
-        print(f"Document processing request from user: {request.user}")
-        print(f"Files in request: {list(request.FILES.keys())}")
-        print(f"Data in request: {dict(request.data)}")
-        
+        logger.debug(f"Document processing request from user {request.user}, files: {list(request.FILES.keys())}")
+
         # Check rate limits (skip for now to debug)
         # try:
         #     RateLimiter.check_upload_limit(request.user)
         # except Exception as e:
-        #     print(f"Rate limit error: {e}")
+        #     logger.warning(f"Rate limit error: {e}")
         #     ErrorLogger.log_security_event('rate_limit_exceeded', request.user, str(e))
         #     return Response({'error': str(e)}, status=status.HTTP_429_TOO_MANY_REQUESTS)
         
@@ -136,7 +137,7 @@ class ProcessDocumentView(APIView):
             
         except Exception as e:
             error_msg = str(e)
-            print(f"Document processing error: {error_msg}")
+            logger.exception("Document processing error")
             
             # Return fallback data instead of complete failure
             fallback_data = {
