@@ -88,7 +88,7 @@ export const ProformaProcessor: React.FC<ProformaProcessorProps> = ({
       <CardContent className="space-y-4">
         <FileUpload
           onFileSelect={handleFileUpload}
-          accept=".pdf,.jpg,.jpeg,.png,.bmp,.tiff,.gif,.txt,.text,.csv"
+          accept=".pdf,.docx,.jpg,.jpeg,.png,.bmp,.tiff,.gif,.txt,.text,.csv"
           maxSize={15 * 1024 * 1024} // 15MB
           label="Upload Proforma Invoice"
         />

@@ -144,7 +144,7 @@ export function FileUpload({
             Drag and drop file here or click to browse
           </p>
           <p className="text-xs text-muted-foreground">
-            Supported: PDF, Images (JPG, PNG, BMP, TIFF, GIF), Text files (TXT, CSV) - Max {(maxSize / 1024 / 1024).toFixed(0)}MB
+            Supported: {accept.split(',').map((t) => t.trim().replace(/^\./, '').toUpperCase()).join(', ')} - Max {(maxSize / 1024 / 1024).toFixed(0)}MB
           </p>
         </div>
       ) : (

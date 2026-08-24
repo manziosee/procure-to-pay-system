@@ -84,7 +84,7 @@ A comprehensive **Procure-to-Pay** system with Django REST API backend and React
 ### Prerequisites
 - [Docker](https://www.docker.com/) and Docker Compose
 - [Git](https://git-scm.com/)
-- **OpenAI API Key** - Get yours at [https://platform.openai.com/api-keys](https://platform.openai.com/api-keys)
+- **Groq API Key** - Get yours at [https://console.groq.com/keys](https://console.groq.com/keys)
 
 ### 📦 Installation
 
@@ -97,7 +97,7 @@ A comprehensive **Procure-to-Pay** system with Django REST API backend and React
 2. **Configure Environment**
    ```bash
    cp .env.docker.template .env
-   # Edit .env and add your OPENAI_API_KEY
+   # Edit .env and add your GROQ_API_KEY
    ```
 
 3. **Start with Docker**
@@ -120,8 +120,8 @@ A comprehensive **Procure-to-Pay** system with Django REST API backend and React
 ### ⚠️ **CRITICAL: Never Commit API Keys**
 - All `.env*` files are in `.gitignore`
 - Use `./setup-env.sh` for secure environment setup
-- Get OpenAI API key: [https://platform.openai.com/api-keys](https://platform.openai.com/api-keys)
-- Use Fly.io secrets for production: `fly secrets set OPENAI_API_KEY=<your-key>`
+- Get Groq API key: [https://console.groq.com/keys](https://console.groq.com/keys)
+- Use Fly.io secrets for production: `fly secrets set GROQ_API_KEY=<your-key>`
 
 ### 🔍 **Security Checklist:**
 - ✅ API keys in environment variables only
@@ -258,9 +258,10 @@ graph TD
 ### 🤖 **AI Integration**
 - **OCR Processing**: Extract text from images using pytesseract
 - **PDF Processing**: Extract data from PDF documents
-- **OpenAI Integration**: Intelligent data extraction from documents (requires API key)
+- **Word Processing**: Extract data from .docx documents (including tables)
+- **Groq Integration**: Intelligent data extraction from documents (requires API key)
 - **Receipt Validation**: Compare receipts against purchase orders
-- **Setup**: Get your OpenAI API key at [https://platform.openai.com/api-keys](https://platform.openai.com/api-keys)
+- **Setup**: Get your Groq API key at [https://console.groq.com/keys](https://console.groq.com/keys)
 
 ### 📊 **Data Models**
 - **User**: Extended with roles and departments
@@ -273,20 +274,20 @@ graph TD
 
 See [DEPLOYMENT.md](DEPLOYMENT.md) for complete environment setup.
 
-### 🔑 **OpenAI API Key Setup**
+### 🔑 **Groq API Key Setup**
 
 **Required for AI document processing features:**
 
-1. **Get API Key**: Visit [https://platform.openai.com/api-keys](https://platform.openai.com/api-keys)
-2. **Create New Key**: Click "Create new secret key"
-3. **Copy Key**: Save the key securely (starts with `sk-`)
+1. **Get API Key**: Visit [https://console.groq.com/keys](https://console.groq.com/keys)
+2. **Create New Key**: Click "Create API Key"
+3. **Copy Key**: Save the key securely (starts with `gsk_`)
 4. **Add to Environment**:
    ```bash
    # In your .env file (NOT committed to git)
-   OPENAI_API_KEY=<your-actual-key-here>
+   GROQ_API_KEY=<your-actual-key-here>
    
    # OR set as environment variable
-   export OPENAI_API_KEY=<your-actual-key-here>
+   export GROQ_API_KEY=<your-actual-key-here>
    ```
 
 **Without API Key**: System works with basic text extraction (no AI features)

@@ -163,7 +163,7 @@ CORS_ALLOWED_ORIGINS = config(
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOW_ALL_ORIGINS = False
 
-OPENAI_API_KEY = config('OPENAI_API_KEY', default='')
+GROQ_API_KEY = config('GROQ_API_KEY', default='')
 
 # Refresh token cookie (httpOnly) settings
 REFRESH_TOKEN_COOKIE_NAME = 'refresh_token'

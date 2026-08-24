@@ -2,7 +2,8 @@ import logging
 import pytesseract
 import pdfplumber
 from PIL import Image
-from openai import OpenAI
+from groq import Groq
+import docx
 import json
 import re
 import tempfile
@@ -19,6 +20,9 @@ from io import BytesIO
 
 logger = logging.getLogger(__name__)
 
+# Fast, strong general-purpose Groq model - good at structured JSON extraction.
+GROQ_MODEL = "llama-3.3-70b-versatile"
+
 class ErrorLogger:
     @staticmethod
     def log_file_processing_error(filename, error):
@@ -31,17 +35,17 @@ class ErrorLogger:
 class DocumentProcessor:
     def __init__(self):
         self.client = None
-        api_key = settings.OPENAI_API_KEY
+        api_key = settings.GROQ_API_KEY
 
-        if api_key and api_key != '<your-openai-api-key>':
+        if api_key:
             try:
-                self.client = OpenAI(api_key=api_key)
-                logger.info("OpenAI client initialized successfully")
+                self.client = Groq(api_key=api_key)
+                logger.info("Groq client initialized successfully")
             except Exception:
-                logger.exception("OpenAI client initialization failed")
+                logger.exception("Groq client initialization failed")
                 self.client = None
         else:
-            logger.info("No valid OpenAI API key found - using basic processing")
+            logger.info("No GROQ_API_KEY configured - using basic processing")
     
     def extract_text_from_image(self, image_path):
         """Extract text from images with enhanced OCR"""
@@ -66,7 +70,25 @@ class DocumentProcessor:
         except Exception:
             logger.exception(f"OCR failed for {image_path}")
             return ""
-    
+
+    def extract_text_from_docx(self, docx_path):
+        """Extract text from Word (.docx) documents, including any tables"""
+        try:
+            document = docx.Document(docx_path)
+            parts = [p.text for p in document.paragraphs if p.text.strip()]
+
+            for table in document.tables:
+                for row in table.rows:
+                    cells = [cell.text.strip() for cell in row.cells]
+                    if any(cells):
+                        parts.append('\t'.join(cells))
+
+            return '\n'.join(parts)
+
+        except Exception:
+            logger.exception(f"Word document extraction failed for {docx_path}")
+            return ""
+
     def extract_text_from_pdf(self, pdf_path):
         """Extract text from PDF with multiple fallback methods"""
         text = ""
@@ -169,10 +191,14 @@ class DocumentProcessor:
                 if not text.strip():
                     text = self._extract_pdf_alternative(file_path)
             
+            # Word documents
+            elif file_ext.endswith(('.docx',)):
+                text = self.extract_text_from_docx(file_path)
+
             # Text files
             elif file_ext.endswith(('.txt', '.text', '.csv')):
                 text = self._extract_text_file(file_path)
-            
+
             # Image files
             elif file_ext.endswith(('.jpg', '.jpeg', '.png', '.bmp', '.tiff', '.gif')):
                 text = self.extract_text_from_image(file_path)
@@ -200,7 +226,7 @@ class DocumentProcessor:
     def _ai_extract_proforma(self, text):
         try:
             if not self.client:
-                logger.info("OpenAI client not initialized - falling back to basic extraction")
+                logger.info("Groq client not initialized - falling back to basic extraction")
                 return self._basic_extract_proforma(text)
 
             if not text or len(text.strip()) < 10:
@@ -209,28 +235,30 @@ class DocumentProcessor:
             logger.debug(f"Attempting AI extraction with text length: {len(text)}")
 
             response = self.client.chat.completions.create(
-                model="gpt-3.5-turbo",
+                model=GROQ_MODEL,
                 messages=[
                     {
-                        "role": "system", 
-                        "content": """Extract data from proforma invoice. Return JSON with:
+                        "role": "system",
+                        "content": """Extract structured data from a proforma invoice. Respond with a JSON object with:
 - vendor: company/supplier name
-- total_amount: FINAL TOTAL amount (not subtotal), include tax if present
-- items: array with name, quantity, unit_price for each line item
-- confidence: extraction confidence (0-1)
+- total_amount: FINAL TOTAL amount as a plain number string (not subtotal), include tax if present
+- items: array of objects, each with name, quantity, unit_price for every line item found
+- confidence: your extraction confidence, a number between 0 and 1
 
-IMPORTANT: Use the FINAL TOTAL amount that includes all taxes and fees, NOT the subtotal."""
+IMPORTANT: Use the FINAL TOTAL amount that includes all taxes and fees, NOT the subtotal.
+If you cannot find real line items, return an empty items array rather than inventing any."""
                     },
-                    {"role": "user", "content": f"Extract data from this proforma:\n\n{text[:2000]}"}
+                    {"role": "user", "content": f"Extract data from this proforma invoice:\n\n{text[:4000]}"}
                 ],
                 temperature=0.1,
-                max_tokens=800
+                max_tokens=1200,
+                response_format={"type": "json_object"},
             )
-            
-            content = response.choices[0].message.content.strip()
-            logger.debug(f"OpenAI response received: {content[:200]}...")
 
-            # Clean up response
+            content = response.choices[0].message.content.strip()
+            logger.debug(f"Groq response received: {content[:200]}...")
+
+            # Clean up response (belt-and-suspenders, even with json_object mode)
             if content.startswith('```json'):
                 content = content.replace('```json', '').replace('```', '').strip()
             elif content.startswith('```'):
@@ -246,9 +274,9 @@ IMPORTANT: Use the FINAL TOTAL amount that includes all taxes and fees, NOT the 
             extracted_data.setdefault('items', [])
             extracted_data.setdefault('confidence', 0.9)
             extracted_data['processing_method'] = 'ai_extraction'
-            
+
             return extracted_data
-            
+
         except Exception as e:
             logger.warning(f"AI extraction failed with error ({type(e).__name__}): {e}", exc_info=True)
             # Return enhanced basic extraction with fallback
@@ -347,17 +375,21 @@ IMPORTANT: Use the FINAL TOTAL amount that includes all taxes and fees, NOT the 
     def _ai_extract_receipt(self, text):
         try:
             response = self.client.chat.completions.create(
-                model="gpt-3.5-turbo",
+                model=GROQ_MODEL,
                 messages=[
-                    {"role": "system", "content": "Extract structured data from receipt. Return only valid JSON with seller, total_amount, items (array with name, quantity, unit_price), date."},
-                    {"role": "user", "content": f"Extract data from this receipt:\n{text}"}
+                    {"role": "system", "content": "Extract structured data from a receipt. Respond with a JSON object with seller, total_amount, items (array of objects with name, quantity, unit_price), and date."},
+                    {"role": "user", "content": f"Extract data from this receipt:\n{text[:4000]}"}
                 ],
-                temperature=0
+                temperature=0,
+                max_tokens=1200,
+                response_format={"type": "json_object"},
             )
-            content = response.choices[0].message.content
+            content = response.choices[0].message.content.strip()
             # Clean up response to ensure valid JSON
             if content.startswith('```json'):
                 content = content.replace('```json', '').replace('```', '').strip()
+            elif content.startswith('```'):
+                content = content.replace('```', '').strip()
             return json.loads(content)
         except Exception:
             logger.warning("AI receipt extraction failed", exc_info=True)
@@ -791,7 +823,7 @@ IMPORTANT: Use the FINAL TOTAL amount that includes all taxes and fees, NOT the 
             filename = file_input.name.lower()
             allowed_extensions = [
                 '.pdf', '.jpg', '.jpeg', '.png', '.bmp', '.tiff', '.gif',
-                '.txt', '.text', '.csv'
+                '.txt', '.text', '.csv', '.docx'
             ]
             if not any(filename.endswith(ext) for ext in allowed_extensions):
                 raise ValidationError(f"File type not allowed. Supported: {', '.join(allowed_extensions)}")
@@ -805,7 +837,9 @@ IMPORTANT: Use the FINAL TOTAL amount that includes all taxes and fees, NOT the 
                 mime_type = magic.from_buffer(file_header, mime=True)
                 allowed_mimes = [
                     'application/pdf', 'image/jpeg', 'image/png', 'image/bmp',
-                    'image/tiff', 'image/gif', 'text/plain', 'text/csv'
+                    'image/tiff', 'image/gif', 'text/plain', 'text/csv',
+                    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                    'application/zip',  # .docx files are zip archives internally
                 ]
                 if mime_type not in allowed_mimes:
                     logger.warning(f"MIME type {mime_type} not in allowed list, but proceeding")

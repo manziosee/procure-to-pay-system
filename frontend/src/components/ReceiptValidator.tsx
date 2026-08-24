@@ -90,7 +90,7 @@ export const ReceiptValidator: React.FC<ReceiptValidatorProps> = ({
       <CardContent className="space-y-4">
         <FileUpload
           onFileSelect={handleReceiptUpload}
-          accept=".pdf,.jpg,.jpeg,.png"
+          accept=".pdf,.docx,.jpg,.jpeg,.png"
           maxSize={10 * 1024 * 1024} // 10MB
           label="Upload Receipt"
         />

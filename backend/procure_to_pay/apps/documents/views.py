@@ -29,7 +29,7 @@ class ProcessDocumentView(APIView):
                     'file': {
                         'type': 'string',
                         'format': 'binary',
-                        'description': 'Document file (PDF, JPG, PNG, TXT)'
+                        'description': 'Document file (PDF, DOCX, JPG, PNG, TXT)'
                     },
                     'document_type': {
                         'type': 'string',

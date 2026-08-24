@@ -69,8 +69,8 @@ SECURE_SSL_REDIRECT = True
 SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_SECURE = True
 
-# OpenAI API Key
-OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY')
+# Groq API Key
+GROQ_API_KEY = os.environ.get('GROQ_API_KEY')
 
 # Logging
 LOGGING = {
