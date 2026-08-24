@@ -12,7 +12,12 @@ class User(AbstractUser):
     email = models.EmailField(unique=True)
     role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='staff')
     department = models.CharField(max_length=100, blank=True)
-    
+
+    # TOTP-based 2FA. totp_secret is set as soon as a QR code is generated but only
+    # takes effect once totp_enabled is confirmed True via a verified code.
+    totp_secret = models.CharField(max_length=32, blank=True)
+    totp_enabled = models.BooleanField(default=False)
+
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = ['username', 'first_name', 'last_name']
     

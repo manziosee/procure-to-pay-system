@@ -45,7 +45,7 @@ purchase_request_create_schema = openapi.Schema(
         'amount': openapi.Schema(
             type=openapi.TYPE_NUMBER,
             format=openapi.FORMAT_DECIMAL,
-            description='Total amount (0-1,000,000)',
+            description='Total amount (0-999,999,999,999.99)',
             example=150.50
         ),
         'proforma': openapi.Schema(

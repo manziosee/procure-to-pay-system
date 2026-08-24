@@ -63,11 +63,20 @@ export default function Navbar() {
               )}
               
               {user?.role === 'finance' && (
-                <Link 
-                  to="/finance" 
+                <Link
+                  to="/finance"
                   className="text-sm text-gray-300 hover:text-white transition-colors duration-300"
                 >
                   Finance
+                </Link>
+              )}
+
+              {(user?.role === 'finance' || user?.role?.includes('approver')) && (
+                <Link
+                  to="/vendors"
+                  className="text-sm text-gray-300 hover:text-white transition-colors duration-300"
+                >
+                  Vendors
                 </Link>
               )}
 

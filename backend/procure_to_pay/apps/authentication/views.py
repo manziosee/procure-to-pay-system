@@ -1,6 +1,11 @@
+import base64
 import logging
+from io import BytesIO
 
+import pyotp
+import qrcode
 from django.conf import settings
+from django.core import signing
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny
@@ -11,8 +16,22 @@ from rest_framework_simplejwt.exceptions import TokenError, InvalidToken
 from rest_framework_simplejwt.serializers import TokenRefreshSerializer
 from drf_spectacular.utils import extend_schema
 from .serializers import UserSerializer, RegisterSerializer, LoginSerializer
+from .models import User
 
 logger = logging.getLogger(__name__)
+
+TWO_FA_CHALLENGE_SALT = 'two-factor-login-challenge'
+TWO_FA_CHALLENGE_MAX_AGE = 300  # 5 minutes
+
+
+def _issue_tokens_response(user):
+    refresh = RefreshToken.for_user(user)
+    response = Response({
+        'access': str(refresh.access_token),
+        'user': UserSerializer(user).data
+    })
+    _set_refresh_cookie(response, refresh)
+    return response
 
 
 def _set_refresh_cookie(response, refresh_token):
@@ -69,14 +88,12 @@ class LoginView(APIView):
         serializer = LoginSerializer(data=request.data)
         if serializer.is_valid():
             user = serializer.validated_data['user']
-            refresh = RefreshToken.for_user(user)
 
-            response = Response({
-                'access': str(refresh.access_token),
-                'user': UserSerializer(user).data
-            })
-            _set_refresh_cookie(response, refresh)
-            return response
+            if user.totp_enabled:
+                challenge = signing.dumps(user.id, salt=TWO_FA_CHALLENGE_SALT)
+                return Response({'requires_2fa': True, 'challenge': challenge})
+
+            return _issue_tokens_response(user)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -158,3 +175,120 @@ class UserProfileView(APIView):
     def get(self, request):
         serializer = UserSerializer(request.user)
         return Response(serializer.data)
+
+
+class TwoFactorSetupView(APIView):
+    """Generates a new TOTP secret and a QR code for the user to scan in an
+    authenticator app. The secret isn't active until confirmed via TwoFactorEnableView."""
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(
+        operation_id="setup_2fa",
+        description="Generate a new TOTP secret and QR code for setting up 2FA",
+        request=None,
+        responses={200: None},
+        tags=['Authentication']
+    )
+    def post(self, request):
+        user = request.user
+        secret = pyotp.random_base32()
+        user.totp_secret = secret
+        user.totp_enabled = False
+        user.save(update_fields=['totp_secret', 'totp_enabled'])
+
+        otpauth_url = pyotp.TOTP(secret).provisioning_uri(name=user.email, issuer_name='Procure-to-Pay')
+
+        qr = qrcode.make(otpauth_url)
+        buffer = BytesIO()
+        qr.save(buffer, format='PNG')
+        qr_code_base64 = base64.b64encode(buffer.getvalue()).decode('utf-8')
+
+        return Response({
+            'secret': secret,
+            'otpauth_url': otpauth_url,
+            'qr_code_base64': f'data:image/png;base64,{qr_code_base64}',
+        })
+
+
+class TwoFactorEnableView(APIView):
+    """Confirms 2FA setup by verifying a code against the pending secret."""
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(
+        operation_id="enable_2fa",
+        description="Confirm 2FA setup with a code from the authenticator app",
+        request=None,
+        responses={200: None, 400: None},
+        tags=['Authentication']
+    )
+    def post(self, request):
+        user = request.user
+        code = str(request.data.get('code', '')).strip()
+
+        if not user.totp_secret:
+            return Response({'error': 'Call setup first to generate a secret'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if not pyotp.TOTP(user.totp_secret).verify(code, valid_window=1):
+            return Response({'error': 'Invalid code'}, status=status.HTTP_400_BAD_REQUEST)
+
+        user.totp_enabled = True
+        user.save(update_fields=['totp_enabled'])
+        return Response({'message': '2FA enabled successfully'})
+
+
+class TwoFactorDisableView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(
+        operation_id="disable_2fa",
+        description="Disable 2FA (requires current password)",
+        request=None,
+        responses={200: None, 400: None},
+        tags=['Authentication']
+    )
+    def post(self, request):
+        user = request.user
+        password = request.data.get('password', '')
+
+        if not user.check_password(password):
+            return Response({'error': 'Incorrect password'}, status=status.HTTP_400_BAD_REQUEST)
+
+        user.totp_enabled = False
+        user.totp_secret = ''
+        user.save(update_fields=['totp_enabled', 'totp_secret'])
+        return Response({'message': '2FA disabled successfully'})
+
+
+class TwoFactorVerifyView(APIView):
+    """Second step of login when the account has 2FA enabled: exchanges the
+    short-lived challenge from LoginView plus a TOTP code for real JWT tokens."""
+    permission_classes = [AllowAny]
+
+    @extend_schema(
+        operation_id="verify_2fa",
+        description="Complete login by verifying a 2FA code against the login challenge",
+        request=None,
+        responses={200: None, 400: None},
+        tags=['Authentication']
+    )
+    def post(self, request):
+        challenge = request.data.get('challenge', '')
+        code = str(request.data.get('code', '')).strip()
+
+        try:
+            user_id = signing.loads(challenge, salt=TWO_FA_CHALLENGE_SALT, max_age=TWO_FA_CHALLENGE_MAX_AGE)
+        except signing.BadSignature:
+            return Response({'error': 'Invalid or expired login challenge'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            user = User.objects.get(id=user_id)
+        except User.DoesNotExist:
+            return Response({'error': 'Invalid or expired login challenge'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if not user.totp_enabled:
+            return Response({'error': '2FA is not enabled for this account'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if not pyotp.TOTP(user.totp_secret).verify(code, valid_window=1):
+            return Response({'error': 'Invalid code'}, status=status.HTTP_400_BAD_REQUEST)
+
+        return _issue_tokens_response(user)

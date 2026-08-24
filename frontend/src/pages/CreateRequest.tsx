@@ -17,13 +17,13 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 const requestSchema = z.object({
   title: z.string().min(1, 'Title is required'),
   description: z.string().min(1, 'Description is required'),
-  amount: z.number().min(0.01, 'Amount must be greater than 0').max(1000000, 'Amount cannot exceed 1,000,000 RWF'),
+  amount: z.number().min(0.01, 'Amount must be greater than 0').max(999999999999.99, 'Amount cannot exceed 999,999,999,999.99 RWF'),
   proforma: z.instanceof(File).nullable().optional(),
   items: z.array(z.object({
     name: z.string().min(1, 'Item name is required'),
     description: z.string().min(1, 'Item description is required'),
     quantity: z.number().min(1, 'Quantity must be at least 1'),
-    unit_price: z.number().min(0.01, 'Unit price must be greater than 0').max(1000000, 'Unit price cannot exceed 1,000,000 RWF'),
+    unit_price: z.number().min(0.01, 'Unit price must be greater than 0').max(999999999999.99, 'Unit price cannot exceed 999,999,999,999.99 RWF'),
   })).min(1, 'At least one item is required'),
 });
 
@@ -203,20 +203,18 @@ export default function CreateRequest() {
 
             <div className="space-y-2">
               <label htmlFor="amount" className="block text-sm font-medium">
-                Amount (RWF) - Maximum: 1,000,000
+                Amount (RWF)
               </label>
               <Input
                 id="amount"
                 type="number"
                 step="0.01"
-                max="1000000"
                 placeholder="0.00"
                 {...register('amount', { valueAsNumber: true })}
               />
               {errors.amount && (
                 <p className="text-sm text-destructive">{errors.amount.message}</p>
               )}
-              <p className="text-xs text-gray-500">Note: Amounts over 1,000,000 RWF require special approval process</p>
             </div>
 
             {errors.items && (

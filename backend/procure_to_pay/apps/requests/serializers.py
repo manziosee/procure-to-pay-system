@@ -1,5 +1,14 @@
 from rest_framework import serializers
-from .models import PurchaseRequest, Approval, RequestItem
+from .models import PurchaseRequest, Approval, RequestItem, Vendor
+
+class VendorSerializer(serializers.ModelSerializer):
+    request_count = serializers.IntegerField(read_only=True)
+    total_spend = serializers.DecimalField(max_digits=15, decimal_places=2, read_only=True)
+    last_request_at = serializers.DateTimeField(read_only=True)
+
+    class Meta:
+        model = Vendor
+        fields = ['id', 'name', 'created_at', 'request_count', 'total_spend', 'last_request_at']
 
 class RequestItemSerializer(serializers.ModelSerializer):
     class Meta:

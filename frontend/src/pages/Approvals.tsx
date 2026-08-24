@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Eye, CheckCircle, XCircle, Filter, Clock, FileCheck } from 'lucide-react';
+import { Eye, CheckCircle, XCircle, Filter, Clock, FileCheck, Search } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { PurchaseRequest } from '@/types';
 import { formatCurrency, formatDate } from '@/utils/formatters';
 import { StatusBadge } from '@/components/StatusBadge';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -40,6 +41,7 @@ export default function Approvals() {
   const [approveDialogOpen, setApproveDialogOpen] = useState(false);
   const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
   const [approveComments, setApproveComments] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
 
   // Check if user is an approver
   if (!user?.role?.includes('approver')) {
@@ -81,6 +83,15 @@ export default function Approvals() {
     );
     return userApproval?.approved === false;
   });
+
+  const matchesSearch = (req: PurchaseRequest) => {
+    const term = searchTerm.trim().toLowerCase();
+    if (!term) return true;
+    return req.title.toLowerCase().includes(term) || req.description?.toLowerCase().includes(term);
+  };
+
+  const visiblePendingRequests = pendingRequests.filter(matchesSearch);
+  const visibleReviewedRequests = reviewedRequests.filter(matchesSearch);
 
   const handleApprove = async (request: PurchaseRequest) => {
     try {
@@ -255,7 +266,7 @@ export default function Approvals() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="font-display text-3xl font-bold text-black">Approvals</h1>
+          <h1 className="font-display text-2xl font-bold text-black">Approvals</h1>
           <p className="text-gray-600">
             Manage purchase request approvals — {user.role.replace('_', ' ').toUpperCase()}
           </p>
@@ -278,7 +289,7 @@ export default function Approvals() {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-amber-600">{pendingRequests.length}</div>
+            <div className="text-2xl font-bold text-amber-600">{pendingRequests.length}</div>
             <p className="text-xs text-gray-500">Awaiting your review</p>
           </CardContent>
         </Card>
@@ -291,7 +302,7 @@ export default function Approvals() {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-green-600">{approvedByUser.length}</div>
+            <div className="text-2xl font-bold text-green-600">{approvedByUser.length}</div>
             <p className="text-xs text-gray-500">Successfully approved</p>
           </CardContent>
         </Card>
@@ -304,10 +315,21 @@ export default function Approvals() {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-destructive">{rejectedByUser.length}</div>
+            <div className="text-2xl font-bold text-destructive">{rejectedByUser.length}</div>
             <p className="text-xs text-gray-500">Declined requests</p>
           </CardContent>
         </Card>
+      </div>
+
+      {/* Search */}
+      <div className="relative max-w-sm">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+        <Input
+          placeholder="Search by title or description..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="pl-9"
+        />
       </div>
 
       {/* Tabs for different views */}
@@ -324,22 +346,26 @@ export default function Approvals() {
         </TabsList>
 
         <TabsContent value="pending" className="space-y-4">
-          {pendingRequests.length === 0 ? (
+          {visiblePendingRequests.length === 0 ? (
             <Card className="p-8 border-gray-200">
-              <p className="text-center text-gray-600">No pending requests for approval</p>
+              <p className="text-center text-gray-600">
+                {pendingRequests.length === 0 ? 'No pending requests for approval' : 'No pending requests match your search'}
+              </p>
             </Card>
           ) : (
-            <RequestTable requests={pendingRequests} showActions={true} />
+            <RequestTable requests={visiblePendingRequests} showActions={true} />
           )}
         </TabsContent>
 
         <TabsContent value="reviewed" className="space-y-4">
-          {reviewedRequests.length === 0 ? (
+          {visibleReviewedRequests.length === 0 ? (
             <Card className="p-8 border-gray-200">
-              <p className="text-center text-gray-600">No reviewed requests</p>
+              <p className="text-center text-gray-600">
+                {reviewedRequests.length === 0 ? 'No reviewed requests' : 'No reviewed requests match your search'}
+              </p>
             </Card>
           ) : (
-            <RequestTable requests={reviewedRequests} />
+            <RequestTable requests={visibleReviewedRequests} />
           )}
         </TabsContent>
       </Tabs>

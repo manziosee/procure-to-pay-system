@@ -228,14 +228,16 @@ FILE_UPLOAD_PERMISSIONS = 0o644
 SPECTACULAR_SETTINGS = {
     'TITLE': 'Procure-to-Pay System API',
     'DESCRIPTION': '''Complete API for Purchase Request & Approval System
-    
+
 ## Features
-- 🔐 JWT Authentication with role-based access
+- 🔐 JWT Authentication with role-based access, plus optional TOTP-based 2FA
 - 📋 Multi-level approval workflow (Level 1 → Level 2 → Approved)
-- 🤖 AI-powered document processing (OCR + OpenAI)
-- 📄 Proforma upload and data extraction
+- 🤖 AI-powered document processing (OCR + Groq)
+- 📄 Proforma upload and data extraction, with automatic vendor directory
 - 🔄 Automatic Purchase Order generation
 - 🧾 Receipt validation with discrepancy detection
+- 💰 Per-department budget tracking with compliance alerts
+- 🔍 Search, filtering, and pagination on purchase requests
 
 ## Demo Users
 - **Staff**: staff1@example.com / password123

@@ -363,7 +363,7 @@ If you cannot find real line items, return an empty items array rather than inve
             'total_amount': total,
             'items': items,
             'terms': self._extract_terms(text),
-            'confidence': 0.9,
+            'confidence': 0.3,
             'processing_method': 'enhanced_basic_extraction'
         }
         

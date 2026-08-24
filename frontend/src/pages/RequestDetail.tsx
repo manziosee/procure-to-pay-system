@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { ArrowLeft, Download, CheckCircle, XCircle, Upload, Edit, FileText, Eye, Trash2 } from 'lucide-react';
+import { ArrowLeft, Download, CheckCircle, XCircle, Edit, FileText, Eye, Trash2 } from 'lucide-react';
 import { StatusBadge } from '@/components/StatusBadge';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -30,10 +30,7 @@ export default function RequestDetail() {
   const [approveDialog, setApproveDialog] = useState(false);
   const [rejectDialog, setRejectDialog] = useState(false);
   const [comments, setComments] = useState('');
-  const [receipt, setReceipt] = useState<File | null>(null);
   const [error, setError] = useState('');
-  const [validationResult, setValidationResult] = useState<any>(null);
-  const [isValidating, setIsValidating] = useState(false);
 
   const [request, setRequest] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -111,45 +108,6 @@ export default function RequestDetail() {
       alert(errorMessage);
     }
   };
-
-  const handleReceiptSubmit = async () => {
-    if (!id || !receipt) return;
-    
-    setIsValidating(true);
-    try {
-      const { proforma } = await import('@/services/api');
-      
-      // First submit the receipt (which includes validation)
-      const response = await proforma.upload(receipt);
-      
-      if (response.data.is_valid) {
-        // If validation passes, update the request status
-        const { purchaseRequests } = await import('@/services/api');
-        await purchaseRequests.submitReceipt(id, receipt);
-        
-        alert('Receipt validated and submitted successfully!');
-        setReceipt(null);
-        setValidationResult(null);
-        await loadRequest(); // Reload the request data
-      } else {
-        // Show validation errors
-        const errors = response.data.errors || ['Unknown validation error'];
-        setValidationResult({
-          is_valid: false,
-          errors: Array.isArray(errors) ? errors : [errors]
-        });
-        alert(`Receipt validation failed: ${errors.join(', ')}`);
-      }
-    } catch (error: any) {
-      console.error('Error processing receipt:', error);
-      const errorMessage = error.response?.data?.message || 'Failed to process receipt';
-      setError(errorMessage);
-      alert(`Error: ${errorMessage}`);
-    } finally {
-      setIsValidating(false);
-    }
-  };
-
 
 
   if (isLoading) {
@@ -263,32 +221,14 @@ export default function RequestDetail() {
   const canSubmitReceipt = user?.role === 'staff' && request.status === 'approved' && !request.receipt;
 
   const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'pending': 
-        return (
-          <Badge className="bg-yellow-100 text-yellow-800 border border-yellow-300 font-semibold px-3 py-1">
-            🕐 PENDING
-          </Badge>
-        );
-      case 'approved': 
-        return (
-          <Badge className="bg-green-100 text-green-800 border border-green-300 font-semibold px-3 py-1">
-            ✅ APPROVED
-          </Badge>
-        );
-      case 'rejected': 
-        return (
-          <Badge className="bg-red-100 text-red-800 border border-red-300 font-semibold px-3 py-1">
-            ❌ REJECTED
-          </Badge>
-        );
-      default: 
-        return (
-          <Badge className="bg-gray-100 text-gray-800 border border-gray-300 font-semibold px-3 py-1">
-            {status.toUpperCase()}
-          </Badge>
-        );
+    if (status === 'pending' || status === 'approved' || status === 'rejected') {
+      return <StatusBadge status={status} className="px-3 py-1 text-sm" />;
     }
+    return (
+      <Badge className="bg-gray-100 text-gray-800 border border-gray-300 font-semibold px-3 py-1">
+        {status.toUpperCase()}
+      </Badge>
+    );
   };
 
   return (
@@ -307,7 +247,7 @@ export default function RequestDetail() {
               Back to Dashboard
             </Button>
             <div>
-              <h1 className="text-4xl font-bold text-black gradient-text">{request.title}</h1>
+              <h1 className="text-2xl font-bold text-black">{request.title}</h1>
               <p className="text-lg text-gray-600 font-medium">Request #{request.id}</p>
             </div>
           </div>
@@ -326,7 +266,7 @@ export default function RequestDetail() {
           {/* Request Information */}
           <Card className="card-premium bg-white border-2 border-gray-200">
             <CardHeader>
-              <CardTitle className="text-xl font-bold text-black flex items-center">
+              <CardTitle className="text-lg font-bold text-black flex items-center">
                 <FileText className="mr-3 h-6 w-6" />
                 Request Information
               </CardTitle>
@@ -339,41 +279,41 @@ export default function RequestDetail() {
               
               {/* Display extracted items if available */}
               {request.items && request.items.length > 0 && (
-                <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
-                  <p className="text-sm font-semibold text-blue-700 mb-3">📋 Extracted Items</p>
+                <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+                  <p className="text-sm font-semibold text-gray-700 mb-3">Extracted Items</p>
                   <div className="space-y-2">
                     {request.items.map((item: any, index: number) => (
-                      <div key={item.id || index} className="flex justify-between items-center p-2 bg-white rounded border border-blue-200">
+                      <div key={item.id || index} className="flex justify-between items-center p-2 bg-white rounded border border-gray-200">
                         <div className="flex-1">
-                          <p className="font-medium text-blue-900">{item.name}</p>
-                          <p className="text-sm text-blue-600">Qty: {item.quantity} × RWF {item.unit_price}</p>
+                          <p className="font-medium text-black">{item.name}</p>
+                          <p className="text-sm text-gray-600">Qty: {item.quantity} × RWF {item.unit_price}</p>
                         </div>
                         <div className="text-right">
-                          <p className="font-semibold text-blue-800">RWF {item.total_price}</p>
+                          <p className="font-semibold text-black">RWF {item.total_price}</p>
                         </div>
                       </div>
                     ))}
                   </div>
                 </div>
               )}
-              
+
               <Separator className="bg-gray-200" />
-              <div className="text-center p-6 bg-gradient-to-r from-green-50 to-blue-50 rounded-lg border border-green-200">
+              <div className="text-center p-6 bg-gray-50 rounded-lg border border-gray-200">
                 <p className="text-sm font-semibold text-gray-700 mb-2">Request Amount</p>
-                <p className="text-4xl font-bold text-green-700 mb-1">
+                <p className="text-2xl font-bold text-black mb-1">
                   {parseFloat(request.amount).toLocaleString('en-RW', { style: 'currency', currency: 'RWF' })}
                 </p>
-                <p className="text-sm text-green-600">Total requested amount</p>
+                <p className="text-sm text-gray-500">Total requested amount</p>
               </div>
               <Separator className="bg-gray-200" />
               <div className="grid grid-cols-2 gap-6">
-                <div className="text-center p-4 bg-blue-50 rounded-lg border border-blue-200">
-                  <p className="text-sm font-semibold text-blue-700 mb-2">Created By</p>
-                  <p className="text-lg font-bold text-blue-900">{request.created_by_name}</p>
+                <div className="text-center p-4 bg-gray-50 rounded-lg border border-gray-200">
+                  <p className="text-sm font-semibold text-gray-700 mb-2">Created By</p>
+                  <p className="text-lg font-bold text-black">{request.created_by_name}</p>
                 </div>
-                <div className="text-center p-4 bg-purple-50 rounded-lg border border-purple-200">
-                  <p className="text-sm font-semibold text-purple-700 mb-2">Created At</p>
-                  <p className="text-lg font-bold text-purple-900">
+                <div className="text-center p-4 bg-gray-50 rounded-lg border border-gray-200">
+                  <p className="text-sm font-semibold text-gray-700 mb-2">Created At</p>
+                  <p className="text-lg font-bold text-black">
                     {new Date(request.created_at).toLocaleDateString()}
                   </p>
                 </div>
@@ -383,7 +323,7 @@ export default function RequestDetail() {
 
         <Card className="card-premium bg-white border-2 border-gray-200">
           <CardHeader>
-            <CardTitle className="text-xl font-bold text-black flex items-center">
+            <CardTitle className="text-lg font-bold text-black flex items-center">
               <FileText className="mr-3 h-6 w-6" />
               Documents & AI Processing
             </CardTitle>
@@ -393,51 +333,51 @@ export default function RequestDetail() {
           </CardHeader>
           <CardContent className="space-y-6">
             {/* Proforma Invoice */}
-            <div className="p-4 border-2 border-blue-100 rounded-lg bg-blue-50">
+            <div className="p-4 border-2 border-gray-200 rounded-lg bg-gray-50">
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center">
-                  <div className="h-10 w-10 bg-blue-200 rounded-full flex items-center justify-center mr-3">
+                  <div className="h-10 w-10 bg-gray-200 rounded-full flex items-center justify-center mr-3">
                     📄
                   </div>
                   <div>
-                    <p className="font-semibold text-blue-900">Proforma Invoice</p>
-                    <p className="text-sm text-blue-700">AI-processed document</p>
+                    <p className="font-semibold text-black">Proforma Invoice</p>
+                    <p className="text-sm text-gray-600">AI-processed document</p>
                   </div>
                 </div>
                 <div className="flex items-center space-x-2">
                   {(request.proforma || request.proforma_filename) && (
-                    <Badge className="bg-green-100 text-green-800 border border-green-300">
-                      ✅ Processed
+                    <Badge className="bg-black text-white border border-black">
+                      Processed
                     </Badge>
                   )}
                 </div>
               </div>
               {request.proforma || request.proforma_filename ? (
                 <div className="space-y-3">
-                  <div className="p-3 bg-white rounded-lg border border-blue-200">
+                  <div className="p-3 bg-white rounded-lg border border-gray-200">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center">
-                        <div className="h-8 w-8 bg-blue-100 rounded flex items-center justify-center mr-3">
+                        <div className="h-8 w-8 bg-gray-100 rounded flex items-center justify-center mr-3">
                           📎
                         </div>
                         <div>
-                          <p className="text-sm font-medium text-blue-900">
+                          <p className="text-sm font-medium text-black">
                             {request.proforma_filename || `proforma-${request.id}.pdf`}
                           </p>
-                          <p className="text-xs text-blue-600">
+                          <p className="text-xs text-gray-500">
                             Uploaded by staff • AI processed
                           </p>
                         </div>
                       </div>
-                      <div className="text-xs text-blue-500">
+                      <div className="text-xs text-gray-500">
                         {new Date(request.created_at).toLocaleDateString()}
                       </div>
                     </div>
                   </div>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="w-full border-2 border-blue-300 text-blue-700 hover:bg-blue-100 hover:border-blue-400 transition-all duration-300"
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full border-2 border-gray-300 text-black hover:bg-black hover:text-white hover:border-black transition-all duration-300"
                     onClick={async () => {
                       try {
                         const { purchaseRequests } = await import('@/services/api');
@@ -459,45 +399,45 @@ export default function RequestDetail() {
                     Download Proforma
                   </Button>
                   {request.ai_extracted_data && (
-                    <div className="p-3 bg-blue-100 rounded-lg border border-blue-200">
-                      <p className="text-sm font-semibold text-blue-900 mb-2">🤖 AI Extraction Complete</p>
-                      <div className="text-sm text-blue-800 space-y-2">
+                    <div className="p-3 bg-gray-100 rounded-lg border border-gray-200">
+                      <p className="text-sm font-semibold text-black mb-2">AI Extraction Complete</p>
+                      <div className="text-sm text-gray-700 space-y-2">
                         <p className="font-medium">Successfully processed your proforma invoice.</p>
-                        
+
                         <div className="grid grid-cols-2 gap-4 mt-3">
                           <div>
-                            <p className="font-semibold text-blue-700">Vendor:</p>
-                            <p className="text-blue-900">{request.ai_extracted_data.vendor || request.proforma_data?.vendor || 'Unknown'}</p>
+                            <p className="font-semibold text-gray-600">Vendor:</p>
+                            <p className="text-black">{request.ai_extracted_data.vendor || request.proforma_data?.vendor || 'Unknown'}</p>
                           </div>
                           <div>
-                            <p className="font-semibold text-blue-700">Total Amount:</p>
-                            <p className="text-blue-900 font-bold">RWF {parseFloat(request.ai_extracted_data.total_amount || request.proforma_data?.total_amount || '0').toLocaleString()}</p>
+                            <p className="font-semibold text-gray-600">Total Amount:</p>
+                            <p className="text-black font-bold">RWF {parseFloat(request.ai_extracted_data.total_amount || request.proforma_data?.total_amount || '0').toLocaleString()}</p>
                           </div>
                           <div>
-                            <p className="font-semibold text-blue-700">Items Found:</p>
-                            <p className="text-blue-900">{request.items?.length || 0} items</p>
+                            <p className="font-semibold text-gray-600">Items Found:</p>
+                            <p className="text-black">{request.items?.length || 0} items</p>
                           </div>
                           <div>
-                            <p className="font-semibold text-blue-700">Processing:</p>
-                            <p className="text-blue-900">{request.ai_extracted_data.processing_method === 'ai_extraction' ? 'AI' : 'Basic'}</p>
+                            <p className="font-semibold text-gray-600">Processing:</p>
+                            <p className="text-black">{request.ai_extracted_data.processing_method === 'ai_extraction' ? 'AI' : 'Basic'}</p>
                           </div>
                           <div>
-                            <p className="font-semibold text-blue-700">Confidence:</p>
-                            <p className="text-blue-900">{Math.round((request.ai_extracted_data.confidence || request.proforma_data?.confidence || 0.5) * 100)}%</p>
+                            <p className="font-semibold text-gray-600">Confidence:</p>
+                            <p className="text-black">{Math.round((request.ai_extracted_data.confidence || request.proforma_data?.confidence || 0.5) * 100)}%</p>
                           </div>
                         </div>
-                        
+
                         {request.items && request.items.length > 0 && (
                           <div className="mt-3">
-                            <p className="font-semibold text-blue-700 mb-2">Extracted Items:</p>
+                            <p className="font-semibold text-gray-600 mb-2">Extracted Items:</p>
                             <div className="space-y-1">
                               {request.items.slice(0, 3).map((item: any, index: number) => (
-                                <div key={item.id || index} className="text-xs text-blue-800">
+                                <div key={item.id || index} className="text-xs text-gray-700">
                                   {item.name} - Qty: {item.quantity} - RWF {item.unit_price}
                                 </div>
                               ))}
                               {request.items.length > 3 && (
-                                <div className="text-xs text-blue-600 italic">...and {request.items.length - 3} more items</div>
+                                <div className="text-xs text-gray-500 italic">...and {request.items.length - 3} more items</div>
                               )}
                             </div>
                           </div>
@@ -509,61 +449,61 @@ export default function RequestDetail() {
               ) : (
                 <div className="text-center py-6">
                   <div className="text-5xl mb-3">📄</div>
-                  <p className="text-sm text-blue-700 font-medium mb-1">No proforma uploaded</p>
-                  <p className="text-xs text-blue-600">Staff needs to upload proforma for processing</p>
-                  <div className="mt-3 p-2 bg-blue-100 rounded-lg">
-                    <p className="text-xs text-blue-800">💡 Contact staff to upload the proforma document</p>
+                  <p className="text-sm text-gray-700 font-medium mb-1">No proforma uploaded</p>
+                  <p className="text-xs text-gray-500">Staff needs to upload proforma for processing</p>
+                  <div className="mt-3 p-2 bg-gray-100 rounded-lg">
+                    <p className="text-xs text-gray-600">Contact staff to upload the proforma document</p>
                   </div>
                 </div>
               )}
             </div>
 
             {/* Purchase Order */}
-            <div className="p-4 border-2 border-green-100 rounded-lg bg-green-50">
+            <div className="p-4 border-2 border-gray-200 rounded-lg bg-gray-50">
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center">
-                  <div className="h-10 w-10 bg-green-200 rounded-full flex items-center justify-center mr-3">
+                  <div className="h-10 w-10 bg-gray-200 rounded-full flex items-center justify-center mr-3">
                     📋
                   </div>
                   <div>
-                    <p className="font-semibold text-green-900">Purchase Order</p>
-                    <p className="text-sm text-green-700">Auto-generated on approval</p>
+                    <p className="font-semibold text-black">Purchase Order</p>
+                    <p className="text-sm text-gray-600">Auto-generated on approval</p>
                   </div>
                 </div>
                 <div className="flex items-center space-x-2">
                   {(request.purchase_order || request.status === 'approved') && (
-                    <Badge className="bg-green-100 text-green-800 border border-green-300">
-                      ✅ Generated
+                    <Badge className="bg-black text-white border border-black">
+                      Generated
                     </Badge>
                   )}
                 </div>
               </div>
               {request.purchase_order || request.status === 'approved' ? (
                 <div className="space-y-3">
-                  <div className="p-3 bg-white rounded-lg border border-green-200">
+                  <div className="p-3 bg-white rounded-lg border border-gray-200">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center">
-                        <div className="h-8 w-8 bg-green-100 rounded flex items-center justify-center mr-3">
+                        <div className="h-8 w-8 bg-gray-100 rounded flex items-center justify-center mr-3">
                           📝
                         </div>
                         <div>
-                          <p className="text-sm font-medium text-green-900">
+                          <p className="text-sm font-medium text-black">
                             {request.purchase_order_filename || `PO-${request.id}.pdf`}
                           </p>
-                          <p className="text-xs text-green-600">
+                          <p className="text-xs text-gray-500">
                             Purchase Order #{request.id} • Auto-generated
                           </p>
                         </div>
                       </div>
-                      <div className="text-xs text-green-500">
+                      <div className="text-xs text-gray-500">
                         {request.status === 'approved' ? 'Ready' : 'Generated'}
                       </div>
                     </div>
                   </div>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="w-full border-2 border-green-300 text-green-700 hover:bg-green-100 hover:border-green-400 transition-all duration-300"
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full border-2 border-gray-300 text-black hover:bg-black hover:text-white hover:border-black transition-all duration-300"
                     onClick={async () => {
                       try {
                         const { purchaseRequests } = await import('@/services/api');
@@ -588,61 +528,61 @@ export default function RequestDetail() {
               ) : (
                 <div className="text-center py-6">
                   <div className="text-5xl mb-3">⏳</div>
-                  <p className="text-sm text-green-700 font-medium mb-1">Not generated yet</p>
-                  <p className="text-xs text-green-600">Will be auto-generated upon approval</p>
-                  <div className="mt-3 p-2 bg-green-100 rounded-lg">
-                    <p className="text-xs text-green-800">💡 Requires both Level 1 & Level 2 approval</p>
+                  <p className="text-sm text-gray-700 font-medium mb-1">Not generated yet</p>
+                  <p className="text-xs text-gray-500">Will be auto-generated upon approval</p>
+                  <div className="mt-3 p-2 bg-gray-100 rounded-lg">
+                    <p className="text-xs text-gray-600">Requires both Level 1 & Level 2 approval</p>
                   </div>
                 </div>
               )}
             </div>
 
             {/* Receipt */}
-            <div className="p-4 border-2 border-purple-100 rounded-lg bg-purple-50">
+            <div className="p-4 border-2 border-gray-200 rounded-lg bg-gray-50">
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center">
-                  <div className="h-10 w-10 bg-purple-200 rounded-full flex items-center justify-center mr-3">
+                  <div className="h-10 w-10 bg-gray-200 rounded-full flex items-center justify-center mr-3">
                     🧾
                   </div>
                   <div>
-                    <p className="font-semibold text-purple-900">Receipt</p>
-                    <p className="text-sm text-purple-700">AI-validated against PO</p>
+                    <p className="font-semibold text-black">Receipt</p>
+                    <p className="text-sm text-gray-600">AI-validated against PO</p>
                   </div>
                 </div>
                 <div className="flex items-center space-x-2">
                   {request.receipt && (
-                    <Badge className="bg-purple-100 text-purple-800 border border-purple-300">
-                      ✅ Validated
+                    <Badge className="bg-black text-white border border-black">
+                      Validated
                     </Badge>
                   )}
                 </div>
               </div>
               {request.receipt ? (
                 <div className="space-y-3">
-                  <div className="p-3 bg-white rounded-lg border border-purple-200">
+                  <div className="p-3 bg-white rounded-lg border border-gray-200">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center">
-                        <div className="h-8 w-8 bg-purple-100 rounded flex items-center justify-center mr-3">
+                        <div className="h-8 w-8 bg-gray-100 rounded flex items-center justify-center mr-3">
                           📎
                         </div>
                         <div>
-                          <p className="text-sm font-medium text-purple-900">
+                          <p className="text-sm font-medium text-black">
                             {request.receipt_filename || `receipt-${request.id}.pdf`}
                           </p>
-                          <p className="text-xs text-purple-600">
+                          <p className="text-xs text-gray-500">
                             Submitted & AI-validated
                           </p>
                         </div>
                       </div>
-                      <div className="text-xs text-purple-500">
+                      <div className="text-xs text-gray-500">
                         Verified
                       </div>
                     </div>
                   </div>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="w-full border-2 border-purple-300 text-purple-700 hover:bg-purple-100 hover:border-purple-400 transition-all duration-300"
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full border-2 border-gray-300 text-black hover:bg-black hover:text-white hover:border-black transition-all duration-300"
                     onClick={async () => {
                       try {
                         const { purchaseRequests } = await import('@/services/api');
@@ -664,40 +604,40 @@ export default function RequestDetail() {
                     Download Receipt
                   </Button>
                   {request.receipt_validation_result && (
-                    <div className="p-3 bg-purple-100 rounded-lg border border-purple-200">
-                      <p className="text-sm font-semibold text-purple-900 mb-2">🤖 AI Validation Complete</p>
-                      <div className="text-sm text-purple-800 space-y-2">
+                    <div className="p-3 bg-gray-100 rounded-lg border border-gray-200">
+                      <p className="text-sm font-semibold text-black mb-2">AI Validation Complete</p>
+                      <div className="text-sm text-gray-700 space-y-2">
                         <div className="flex items-center justify-between">
                           <span className="font-medium">Validation Status:</span>
                           <div className="flex items-center space-x-2">
                             <span className={`h-2 w-2 rounded-full ${
-                              request.receipt_validation_result.is_valid ? 'bg-green-500' : 'bg-red-500'
+                              request.receipt_validation_result.is_valid ? 'bg-black' : 'bg-red-500'
                             }`}></span>
                             <span className={`font-bold ${
-                              request.receipt_validation_result.is_valid ? 'text-green-700' : 'text-red-700'
+                              request.receipt_validation_result.is_valid ? 'text-black' : 'text-red-700'
                             }`}>
-                              {request.receipt_validation_result.is_valid ? '✅ Valid' : '❌ Invalid'}
+                              {request.receipt_validation_result.is_valid ? 'Valid' : 'Invalid'}
                             </span>
                           </div>
                         </div>
-                        
+
                         {request.receipt_validation_result.confidence && (
                           <div className="flex items-center justify-between">
                             <span className="font-medium">AI Confidence:</span>
-                            <span className="font-bold text-purple-900">
+                            <span className="font-bold text-black">
                               {Math.round(request.receipt_validation_result.confidence * 100)}%
                             </span>
                           </div>
                         )}
-                        
+
                         <div className="flex items-center justify-between">
                           <span className="font-medium">Processing:</span>
-                          <span className="text-purple-900">AI Validation</span>
+                          <span className="text-black">AI Validation</span>
                         </div>
-                        
+
                         {request.receipt_validation_result.discrepancies && request.receipt_validation_result.discrepancies.length > 0 ? (
                           <div className="mt-2 p-2 bg-red-50 rounded border border-red-200">
-                            <p className="text-xs font-semibold text-red-700 mb-1">⚠️ Issues Found:</p>
+                            <p className="text-xs font-semibold text-red-700 mb-1">Issues Found:</p>
                             {request.receipt_validation_result.discrepancies.slice(0, 2).map((issue: any, index: number) => (
                               <p key={index} className="text-xs text-red-600">• {issue.reason || issue}</p>
                             ))}
@@ -706,9 +646,9 @@ export default function RequestDetail() {
                             )}
                           </div>
                         ) : (
-                          <div className="mt-2 p-2 bg-green-50 rounded border border-green-200">
-                            <p className="text-xs font-semibold text-green-700">✅ All validations passed</p>
-                            <p className="text-xs text-green-600">Receipt matches purchase order requirements</p>
+                          <div className="mt-2 p-2 bg-gray-50 rounded border border-gray-200">
+                            <p className="text-xs font-semibold text-black">All validations passed</p>
+                            <p className="text-xs text-gray-600">Receipt matches purchase order requirements</p>
                           </div>
                         )}
                       </div>
@@ -718,15 +658,15 @@ export default function RequestDetail() {
               ) : (
                 <div className="text-center py-6">
                   <div className="text-5xl mb-3">🤖</div>
-                  <p className="text-sm text-purple-700 font-medium mb-1">AI Receipt Validation Ready</p>
-                  <p className="text-xs text-purple-600 mb-3">
-                    {request.status === 'approved' ? 'Submit receipt for intelligent validation' : 'Available after approval'}
+                  <p className="text-sm text-gray-700 font-medium mb-1">AI Receipt Validation Ready</p>
+                  <p className="text-xs text-gray-500 mb-3">
+                    {request.status === 'approved' ? 'Submit receipt for intelligent validation below' : 'Available after approval'}
                   </p>
                   {request.status === 'approved' && user?.role === 'staff' && (
                     <div className="space-y-3">
-                      <div className="p-3 bg-purple-100 rounded-lg border border-purple-200">
-                        <p className="text-xs font-semibold text-purple-800 mb-2">🧠 AI Validation Features:</p>
-                        <div className="grid grid-cols-1 gap-2 text-xs text-purple-700">
+                      <div className="p-3 bg-gray-100 rounded-lg border border-gray-200">
+                        <p className="text-xs font-semibold text-gray-700 mb-2">AI Validation Features:</p>
+                        <div className="grid grid-cols-1 gap-2 text-xs text-gray-600">
                           <div className="flex items-center">
                             <span className="mr-2">✅</span>
                             <span>Smart amount verification against PO</span>
@@ -745,34 +685,15 @@ export default function RequestDetail() {
                           </div>
                         </div>
                       </div>
-                      <div className="p-2 bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg border border-purple-200">
-                        <p className="text-xs text-purple-800 font-medium">💡 Supported: PDF, JPG, PNG • Max 10MB</p>
+                      <div className="p-2 bg-gray-100 rounded-lg border border-gray-200">
+                        <p className="text-xs text-gray-600 font-medium">Supported: PDF, JPG, PNG • Max 10MB — use the "Submit Receipt" section below to upload</p>
                       </div>
-                      <Button 
-                        className="w-full bg-purple-600 text-white hover:bg-purple-700 transition-all duration-300 font-semibold"
-                        onClick={() => {
-                          const fileInput = document.createElement('input');
-                          fileInput.type = 'file';
-                          fileInput.accept = '.pdf,.jpg,.jpeg,.png';
-                          fileInput.onchange = async (e) => {
-                            const file = (e.target as HTMLInputElement).files?.[0];
-                            if (file) {
-                              setReceipt(file);
-                              await handleReceiptSubmit();
-                            }
-                          };
-                          fileInput.click();
-                        }}
-                      >
-                        <Upload className="mr-2 h-4 w-4" />
-                        Upload Receipt for AI Validation
-                      </Button>
                     </div>
                   )}
                   {request.status !== 'approved' && (
-                    <div className="p-3 bg-purple-50 rounded-lg border border-purple-200">
-                      <p className="text-xs text-purple-700 font-medium mb-1">🔒 Waiting for Approval</p>
-                      <p className="text-xs text-purple-600">AI validation will be available once the purchase order is approved</p>
+                    <div className="p-3 bg-gray-100 rounded-lg border border-gray-200">
+                      <p className="text-xs text-gray-700 font-medium mb-1">Waiting for Approval</p>
+                      <p className="text-xs text-gray-500">AI validation will be available once the purchase order is approved</p>
                     </div>
                   )}
                 </div>
@@ -785,7 +706,7 @@ export default function RequestDetail() {
         {/* Approval History */}
         <Card className="card-premium bg-white border-2 border-gray-200 animate-slide-up">
           <CardHeader>
-            <CardTitle className="text-xl font-bold text-black flex items-center">
+            <CardTitle className="text-lg font-bold text-black flex items-center">
               <CheckCircle className="mr-3 h-6 w-6" />
               Approval Timeline
             </CardTitle>
@@ -800,31 +721,31 @@ export default function RequestDetail() {
 
         {/* Staff Actions */}
         {user?.role === 'staff' && request.created_by === user.id && (
-          <Card className="card-premium bg-white border-2 border-blue-200 animate-slide-up">
+          <Card className="card-premium bg-white border-2 border-gray-200 animate-slide-up">
             <CardHeader>
-              <CardTitle className="text-xl font-bold text-blue-800 flex items-center">
+              <CardTitle className="text-lg font-bold text-black flex items-center">
                 <Edit className="mr-3 h-6 w-6" />
                 Staff Actions
               </CardTitle>
-              <CardDescription className="text-blue-600">
+              <CardDescription className="text-gray-600">
                 Manage your purchase request
               </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="flex gap-4">
-                <Button 
-                  asChild 
-                  variant="outline" 
-                  className="flex-1 h-12 border-2 border-blue-200 text-blue-700 hover:bg-blue-50 hover:border-blue-300 transition-all duration-300 font-semibold"
+                <Button
+                  asChild
+                  variant="outline"
+                  className="flex-1 h-12 border-2 border-gray-300 text-black hover:bg-black hover:text-white hover:border-black transition-all duration-300 font-semibold"
                 >
                   <Link to={`/requests/${id}`}>
                     <Eye className="mr-2 h-5 w-5" />
                     View Details
                   </Link>
                 </Button>
-                <Button 
-                  asChild 
-                  className="flex-1 h-12 bg-green-600 text-white hover:bg-green-700 transition-all duration-300 hover:scale-105 font-semibold shadow-lg hover:shadow-xl"
+                <Button
+                  asChild
+                  className="flex-1 h-12 bg-black text-white hover:bg-gray-800 transition-all duration-300 hover:scale-105 font-semibold shadow-lg hover:shadow-xl"
                 >
                   <Link to={`/requests/${id}/edit`}>
                     <Edit className="mr-2 h-5 w-5" />
@@ -857,20 +778,20 @@ export default function RequestDetail() {
 
         {/* Approval Actions */}
         {canApprove && (
-          <Card className="card-premium bg-white border-2 border-yellow-200 animate-slide-up">
+          <Card className="card-premium bg-white border-2 border-gray-200 animate-slide-up">
             <CardHeader>
-              <CardTitle className="text-xl font-bold text-yellow-800 flex items-center">
+              <CardTitle className="text-lg font-bold text-black flex items-center">
                 <CheckCircle className="mr-3 h-6 w-6" />
                 Approval Actions
               </CardTitle>
-              <CardDescription className="text-yellow-600">
+              <CardDescription className="text-gray-600">
                 Review and approve or reject this request
               </CardDescription>
             </CardHeader>
             <CardContent className="flex gap-4">
-              <Button 
-                onClick={() => setApproveDialog(true)} 
-                className="flex-1 h-12 bg-green-600 text-white hover:bg-green-700 transition-all duration-300 hover:scale-105 font-semibold text-base"
+              <Button
+                onClick={() => setApproveDialog(true)}
+                className="flex-1 h-12 bg-black text-white hover:bg-gray-800 transition-all duration-300 hover:scale-105 font-semibold text-base"
               >
                 <CheckCircle className="mr-2 h-5 w-5" />
                 Approve Request
@@ -889,13 +810,13 @@ export default function RequestDetail() {
         {/* Finalized Status */}
         {user?.role?.includes('approver') && request.status !== 'pending' && (
           <Card className={`card-premium border-2 animate-slide-up ${
-            request.status === 'approved' 
-              ? 'bg-green-50 border-green-200' 
+            request.status === 'approved'
+              ? 'bg-gray-50 border-gray-200'
               : 'bg-red-50 border-red-200'
           }`}>
             <CardHeader>
-              <CardTitle className={`text-xl font-bold flex items-center ${
-                request.status === 'approved' ? 'text-green-800' : 'text-red-800'
+              <CardTitle className={`text-lg font-bold flex items-center ${
+                request.status === 'approved' ? 'text-black' : 'text-red-800'
               }`}>
                 {request.status === 'approved' ? (
                   <CheckCircle className="mr-3 h-6 w-6" />
@@ -904,14 +825,14 @@ export default function RequestDetail() {
                 )}
                 Request Status
               </CardTitle>
-              <CardDescription className={request.status === 'approved' ? 'text-green-600' : 'text-red-600'}>
+              <CardDescription className={request.status === 'approved' ? 'text-gray-600' : 'text-red-600'}>
                 This request has been {request.status} and cannot be modified
               </CardDescription>
             </CardHeader>
             <CardContent>
               <div className={`p-6 rounded-lg text-center border-2 ${
-                request.status === 'approved' 
-                  ? 'bg-green-100 text-green-800 border-green-300' 
+                request.status === 'approved'
+                  ? 'bg-black text-white border-black'
                   : 'bg-red-100 text-red-800 border-red-300'
               }`}>
                 {request.status === 'approved' ? (
@@ -919,7 +840,7 @@ export default function RequestDetail() {
                 ) : (
                   <XCircle className="mx-auto h-12 w-12 mb-3" />
                 )}
-                <p className="text-xl font-bold mb-2">
+                <p className="text-lg font-bold mb-2">
                   Request {request.status.toUpperCase()}
                 </p>
                 <p className="text-sm">
@@ -935,7 +856,6 @@ export default function RequestDetail() {
             <ReceiptValidator
               requestId={id!}
               purchaseOrder={request.purchase_order}
-              onValidationComplete={(result) => setValidationResult(result)}
               onReceiptSubmitted={() => {
                 alert('Receipt submitted successfully!');
                 window.location.reload();
@@ -971,7 +891,7 @@ export default function RequestDetail() {
               </Button>
               <Button
                 onClick={handleApprove}
-                className="bg-green-600 hover:bg-green-700 text-white"
+                className="bg-black hover:bg-gray-800 text-white"
               >
                 Approve
               </Button>

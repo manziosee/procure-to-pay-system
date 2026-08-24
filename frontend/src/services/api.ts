@@ -90,7 +90,20 @@ export const auth = {
     const logoutPromise = api.post('/auth/logout/');
     clearSession();
     return logoutPromise;
-  }
+  },
+
+  // Second step of login when the account has 2FA enabled
+  verifyTwoFactor: (challenge: string, code: string) =>
+    api.post('/auth/2fa/verify/', { challenge, code }).then((res) => {
+      if (res.data.access) {
+        setAccessToken(res.data.access);
+      }
+      return res.data;
+    }),
+
+  setupTwoFactor: () => api.post('/auth/2fa/setup/'),
+  enableTwoFactor: (code: string) => api.post('/auth/2fa/enable/', { code }),
+  disableTwoFactor: (password: string) => api.post('/auth/2fa/disable/', { password }),
 };
 
 // Purchase Requests API
@@ -123,7 +136,7 @@ export const purchaseRequests = {
   approve: (id: string, comments?: string) => api.patch(`/requests/${id}/approve/`, { comments: comments || '' }),
 
   // Reject a purchase request with a reason
-  reject: (id: string, reason: string) => api.patch(`/requests/${id}/reject/`, { reason }),
+  reject: (id: string, reason: string) => api.patch(`/requests/${id}/reject/`, { comments: reason }),
 
   // Submit receipt (includes AI validation)
   submitReceipt: (id: string, file: File) => {
@@ -199,7 +212,19 @@ export const finance = {
     responseType: 'blob'
   }),
 
-  generateAlerts: () => api.post('/finance/alerts/generate_alerts/')
+  generateAlerts: () => api.post('/finance/alerts/generate_alerts/'),
+
+  // Budget management (finance only)
+  getBudgets: () => api.get('/finance/budgets/'),
+  createBudget: (data: { department: string; monthly_limit: number }) => api.post('/finance/budgets/', data),
+  updateBudget: (id: number, data: { department?: string; monthly_limit?: number }) => api.patch(`/finance/budgets/${id}/`, data),
+  deleteBudget: (id: number) => api.delete(`/finance/budgets/${id}/`),
+  getBudgetStatus: () => api.get('/finance/budgets/status_report/'),
+};
+
+// Vendor directory (read-only)
+export const vendors = {
+  getAll: () => api.get('/vendors/'),
 };
 
 // API Root

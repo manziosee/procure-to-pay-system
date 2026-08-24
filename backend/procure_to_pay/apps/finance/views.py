@@ -6,12 +6,80 @@ from django.http import HttpResponse
 from django.db.models import Q, Count, Sum
 from django.utils import timezone
 from datetime import timedelta
-from drf_spectacular.utils import extend_schema
-from .models import FinancialDocument, ComplianceAlert
-from .serializers import FinancialDocumentSerializer, ComplianceAlertSerializer
+from drf_spectacular.utils import extend_schema, extend_schema_view
+from .models import FinancialDocument, ComplianceAlert, Budget
+from .serializers import FinancialDocumentSerializer, ComplianceAlertSerializer, BudgetSerializer
 from ..requests.models import PurchaseRequest
 import csv
 from io import StringIO
+
+@extend_schema_view(
+    list=extend_schema(description="List all department budgets (Finance only)", tags=['Budgets']),
+    create=extend_schema(description="Set a monthly spend limit for a department (Finance only)", tags=['Budgets']),
+    retrieve=extend_schema(description="Get a single department's budget (Finance only)", tags=['Budgets']),
+    update=extend_schema(description="Update a department's budget (Finance only)", tags=['Budgets']),
+    partial_update=extend_schema(description="Partially update a department's budget (Finance only)", tags=['Budgets']),
+    destroy=extend_schema(description="Delete a department's budget (Finance only)", tags=['Budgets']),
+)
+class BudgetViewSet(viewsets.ModelViewSet):
+    """Finance-only management of per-department monthly spend limits."""
+    serializer_class = BudgetSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        if getattr(self, 'swagger_fake_view', False):
+            return Budget.objects.none()
+        if self.request.user.role != 'finance':
+            return Budget.objects.none()
+        return Budget.objects.all()
+
+    def _check_finance(self, request):
+        if request.user.role != 'finance':
+            return Response({'error': 'Permission denied'}, status=status.HTTP_403_FORBIDDEN)
+        return None
+
+    def create(self, request, *args, **kwargs):
+        denied = self._check_finance(request)
+        return denied if denied else super().create(request, *args, **kwargs)
+
+    def update(self, request, *args, **kwargs):
+        denied = self._check_finance(request)
+        return denied if denied else super().update(request, *args, **kwargs)
+
+    def partial_update(self, request, *args, **kwargs):
+        denied = self._check_finance(request)
+        return denied if denied else super().partial_update(request, *args, **kwargs)
+
+    def destroy(self, request, *args, **kwargs):
+        denied = self._check_finance(request)
+        return denied if denied else super().destroy(request, *args, **kwargs)
+
+    @extend_schema(description="Spend vs. budget for every department with a budget set", tags=['Budgets'])
+    @action(detail=False, methods=['get'])
+    def status_report(self, request):
+        denied = self._check_finance(request)
+        if denied:
+            return denied
+
+        now = timezone.now()
+        month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+
+        report = []
+        for budget in Budget.objects.all():
+            spent = PurchaseRequest.objects.filter(
+                created_by__department=budget.department,
+                status='approved',
+                created_at__gte=month_start,
+            ).aggregate(total=Sum('amount'))['total'] or 0
+            limit = budget.monthly_limit
+            report.append({
+                'department': budget.department,
+                'monthly_limit': float(limit),
+                'spent': float(spent),
+                'percentage_used': round(float(spent) / float(limit) * 100, 1) if limit else 0,
+            })
+
+        return Response(report)
 
 class FinancialDocumentViewSet(viewsets.ModelViewSet):
     serializer_class = FinancialDocumentSerializer
@@ -122,7 +190,39 @@ class ComplianceAlertViewSet(viewsets.ModelViewSet):
                 request=request_obj
             )
             alerts_created += 1
-        
+
+        # Budget exceeded (current month spend on approved requests vs. each department's limit)
+        now = timezone.now()
+        month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        for budget in Budget.objects.all():
+            spent = PurchaseRequest.objects.filter(
+                created_by__department=budget.department,
+                status='approved',
+                created_at__gte=month_start,
+            ).aggregate(total=Sum('amount'))['total'] or 0
+
+            if spent <= budget.monthly_limit:
+                continue
+
+            already_alerted = ComplianceAlert.objects.filter(
+                alert_type='budget_exceeded',
+                is_active=True,
+                title=f'Budget Exceeded: {budget.department}',
+            ).exists()
+            if already_alerted:
+                continue
+
+            ComplianceAlert.objects.create(
+                alert_type='budget_exceeded',
+                severity='high',
+                title=f'Budget Exceeded: {budget.department}',
+                description=(
+                    f'{budget.department} has spent RWF {spent:,.0f} this month, '
+                    f'exceeding its budget of RWF {budget.monthly_limit:,.0f}'
+                ),
+            )
+            alerts_created += 1
+
         return Response({
             'message': f'{alerts_created} alerts generated',
             'alerts_created': alerts_created

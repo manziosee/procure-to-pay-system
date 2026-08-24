@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { LogIn, Eye, EyeOff, CheckCircle, TriangleAlert } from 'lucide-react';
-import { useAuth } from '@/contexts/AuthContext';
+import { LogIn, Eye, EyeOff, CheckCircle, TriangleAlert, ShieldCheck } from 'lucide-react';
+import { useAuth, RequiresTwoFactorError } from '@/contexts/AuthContext';
 import { LoginCredentials } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -20,7 +20,9 @@ export default function Login() {
   const [error, setError] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(false);
   const [showPassword, setShowPassword] = useState<boolean>(false);
-  const { login } = useAuth();
+  const [twoFactorChallenge, setTwoFactorChallenge] = useState<string | null>(null);
+  const [twoFactorCode, setTwoFactorCode] = useState('');
+  const { login, verifyTwoFactor } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -30,12 +32,97 @@ export default function Login() {
     try {
       await login(credentials);
     } catch (err: any) {
+      if (err instanceof RequiresTwoFactorError) {
+        setTwoFactorChallenge(err.challenge);
+        return;
+      }
       console.error('Login error:', err);
       setError(err.response?.data?.detail || err.message || 'Invalid credentials. Please try again.');
     } finally {
       setLoading(false);
     }
   };
+
+  const handleTwoFactorSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!twoFactorChallenge) return;
+    setLoading(true);
+    setError('');
+
+    try {
+      await verifyTwoFactor(twoFactorChallenge, twoFactorCode);
+    } catch (err: any) {
+      setError(err.message || 'Invalid code. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (twoFactorChallenge) {
+    return (
+      <AuthShell
+        icon={ShieldCheck}
+        title="Two-factor authentication"
+        subtitle="Enter the 6-digit code from your authenticator app"
+        footer={<p className="text-gray-400 text-xs">Secure, role-based access for every team</p>}
+      >
+        {error && (
+          <Alert variant="destructive" className="mb-5">
+            <TriangleAlert className="h-4 w-4" />
+            <AlertDescription className="font-medium">{error}</AlertDescription>
+          </Alert>
+        )}
+
+        <form onSubmit={handleTwoFactorSubmit} className="space-y-4">
+          <div className="space-y-1.5">
+            <Label htmlFor="totp-code">Authentication code</Label>
+            <Input
+              id="totp-code"
+              type="text"
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              placeholder="000000"
+              value={twoFactorCode}
+              onChange={(e) => setTwoFactorCode(e.target.value)}
+              required
+              disabled={loading}
+              className="h-11 text-center tracking-[0.3em] font-mono"
+              maxLength={6}
+            />
+          </div>
+
+          <Button
+            type="submit"
+            className="w-full h-11 font-semibold bg-black hover:bg-gray-800 text-white"
+            disabled={loading}
+          >
+            {loading ? (
+              <div className="flex items-center">
+                <div className="animate-spin rounded-full h-4 w-4 border-2 border-white/40 border-t-white mr-2" />
+                Verifying…
+              </div>
+            ) : (
+              <>Verify</>
+            )}
+          </Button>
+
+          <Button
+            type="button"
+            variant="ghost"
+            className="w-full"
+            onClick={() => {
+              setTwoFactorChallenge(null);
+              setTwoFactorCode('');
+              setError('');
+            }}
+            disabled={loading}
+          >
+            Back to login
+          </Button>
+        </form>
+      </AuthShell>
+    );
+  }
 
   return (
     <AuthShell

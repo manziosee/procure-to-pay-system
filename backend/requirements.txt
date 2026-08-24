@@ -26,3 +26,5 @@ bleach==6.1.0
 django-extensions==3.2.3
 drf-spectacular==0.29.0
 requests==2.31.0
+pyotp==2.9.0
+qrcode==7.4.2

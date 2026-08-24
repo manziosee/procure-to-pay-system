@@ -9,27 +9,23 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { finance as financeAPI } from '@/services/api';
 import { useRequestsSync } from '@/hooks/useRequestsSync';
+import { SimpleLineChart } from '@/components/charts/SimpleLineChart';
 
-// Monthly activity: plain, no status semantics, so it stays neutral gray/black.
-const SimpleBarChart = ({ data }: { data: Array<{ label: string; value: number }> }) => {
-  const maxValue = Math.max(...data.map((d) => d.value), 1);
-
-  return (
-    <div className="space-y-3">
-      {data.map((item) => (
-        <div key={item.label} className="flex items-center gap-3">
-          <div className="w-10 text-sm font-medium text-gray-500">{item.label}</div>
-          <div className="flex-1 bg-gray-100 rounded-full h-2.5 overflow-hidden">
-            <div
-              className="h-full rounded-full bg-black transition-all duration-700 ease-out"
-              style={{ width: `${(item.value / maxValue) * 100}%` }}
-            />
-          </div>
-          <div className="w-8 text-right text-sm text-gray-600">{item.value}</div>
-        </div>
-      ))}
-    </div>
-  );
+// Real per-month request counts for the last N months (including the current one),
+// derived from actual created_at timestamps rather than a fabricated distribution.
+const monthlyRequestCounts = (requests: PurchaseRequest[], months = 6) => {
+  const now = new Date();
+  const buckets: { label: string; value: number; year: number; month: number }[] = [];
+  for (let i = months - 1; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    buckets.push({ label: d.toLocaleString('default', { month: 'short' }), value: 0, year: d.getFullYear(), month: d.getMonth() });
+  }
+  requests.forEach((req) => {
+    const created = new Date(req.created_at);
+    const bucket = buckets.find((b) => b.year === created.getFullYear() && b.month === created.getMonth());
+    if (bucket) bucket.value += 1;
+  });
+  return buckets.map(({ label, value }) => ({ label, value }));
 };
 
 // Approved/Pending/Rejected distribution: the one place status color genuinely carries meaning.
@@ -341,16 +337,7 @@ export default function Dashboard() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <SimpleBarChart
-                  data={[
-                    { label: 'Jan', value: Math.floor((stats.total || 0) * 0.1) },
-                    { label: 'Feb', value: Math.floor((stats.total || 0) * 0.15) },
-                    { label: 'Mar', value: Math.floor((stats.total || 0) * 0.12) },
-                    { label: 'Apr', value: Math.floor((stats.total || 0) * 0.18) },
-                    { label: 'May', value: Math.floor((stats.total || 0) * 0.20) },
-                    { label: 'Jun', value: Math.floor((stats.total || 0) * 0.25) },
-                  ]}
-                />
+                <SimpleLineChart data={monthlyRequestCounts(filteredRequests)} />
               </CardContent>
             </Card>
           </div>
@@ -533,15 +520,15 @@ export default function Dashboard() {
                   </div>
                   <div className="grid grid-cols-3 gap-2 text-center">
                     <div>
-                      <div className="text-lg font-bold text-green-600">{stats.approved}</div>
+                      <div className="text-2xl font-bold text-green-600">{stats.approved}</div>
                       <div className="text-xs text-gray-500">Approved</div>
                     </div>
                     <div>
-                      <div className="text-lg font-bold text-amber-600">{stats.pending}</div>
+                      <div className="text-2xl font-bold text-amber-600">{stats.pending}</div>
                       <div className="text-xs text-gray-500">Pending</div>
                     </div>
                     <div>
-                      <div className="text-lg font-bold text-destructive">{stats.rejected}</div>
+                      <div className="text-2xl font-bold text-destructive">{stats.rejected}</div>
                       <div className="text-xs text-gray-500">Rejected</div>
                     </div>
                   </div>

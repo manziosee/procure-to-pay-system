@@ -14,20 +14,32 @@ A comprehensive **Procure-to-Pay** system with Django REST API backend and React
 
 ### 🔐 Authentication & Authorization
 - Multi-role user system (Staff, Approver Level 1/2, Finance)
-- JWT-based authentication
+- JWT-based authentication with httpOnly refresh cookies
 - Role-based access control (RBAC)
+- Optional TOTP-based Two-Factor Authentication (2FA) via any authenticator app — no external SMS/email provider required
 
 ### 📋 Purchase Request Management
 - Create and track purchase requests
 - Multi-level approval workflow
 - Status tracking (Pending → Approved/Rejected)
 - Automatic Purchase Order generation
+- Search, filter (by status), and paginate purchase requests
 
 ### 🤖 AI-Powered Document Processing
 - OCR for image-based documents
-- PDF text extraction
+- PDF, Word (.docx), and text extraction
+- Groq-powered structured extraction for proformas and receipts
 - Proforma and receipt validation
-- Automatic data extraction
+- Automatic data extraction, including line items and vendor name
+
+### 🏢 Vendor Directory
+- Vendors are automatically captured from AI-extracted proforma data
+- Per-vendor history: request count, total spend, most recent request
+
+### 💰 Budget Tracking
+- Finance can set a monthly spend limit per department
+- Real-time spend-vs-budget view on the Finance dashboard
+- Automatic compliance alerts when a department exceeds its budget
 
 ### 📁 File Management
 - Secure file uploads
@@ -49,16 +61,17 @@ A comprehensive **Procure-to-Pay** system with Django REST API backend and React
 - Django 4.2
 - Django REST Framework
 - JWT Authentication
-- Celery
+- pyotp + qrcode (2FA)
 - pytesseract (OCR)
-- pdfplumber
+- pdfplumber / python-docx
+- Groq (AI extraction)
 
 </td>
 <td>
 
 - React 18
 - TypeScript
-- Material-UI
+- Tailwind CSS + Radix UI
 - React Query
 - Axios
 - React Router
@@ -67,7 +80,6 @@ A comprehensive **Procure-to-Pay** system with Django REST API backend and React
 <td>
 
 - Neon PostgreSQL
-- Redis
 - File Storage
 
 </td>
@@ -175,25 +187,39 @@ python3 test_api.py
 
 | Method | Endpoint | Description | Access |
 |--------|----------|-------------|--------|
-| `POST` | `/api/auth/login/` | User authentication | Public |
+| `POST` | `/api/auth/login/` | User authentication (returns `requires_2fa` + challenge if 2FA is enabled) | Public |
+| `POST` | `/api/auth/register/` | Register a new user | Public |
+| `POST` | `/api/auth/refresh/` | Refresh JWT access token (httpOnly cookie) | Public |
+| `POST` | `/api/auth/logout/` | Logout and blacklist refresh token | Authenticated |
 | `GET` | `/api/auth/profile/` | Get user profile | Authenticated |
-| `GET` | `/api/requests/` | List requests (role-filtered) | Authenticated |
+| `POST` | `/api/auth/2fa/setup/` | Generate a new TOTP secret + QR code | Authenticated |
+| `POST` | `/api/auth/2fa/enable/` | Confirm 2FA setup with a code | Authenticated |
+| `POST` | `/api/auth/2fa/disable/` | Disable 2FA (requires password) | Authenticated |
+| `POST` | `/api/auth/2fa/verify/` | Complete login with a 2FA code + challenge | Public |
+| `GET` | `/api/requests/` | List requests (role-filtered, supports `search`, `status`, `amount_min`/`amount_max`, `created_after`/`created_before`, `page`) | Authenticated |
 | `POST` | `/api/requests/` | Create new request | Staff |
 | `GET` | `/api/requests/{id}/` | Get request details | Authenticated |
 | `PUT` | `/api/requests/{id}/` | Update request | Staff (pending only) |
 | `PATCH` | `/api/requests/{id}/approve/` | Approve request | Approvers |
-| `PATCH` | `/api/requests/{id}/reject/` | Reject request | Approvers |
+| `PATCH` | `/api/requests/{id}/reject/` | Reject request (with `comments`) | Approvers |
 | `POST` | `/api/requests/{id}/submit-receipt/` | Submit receipt | Staff |
 | `POST` | `/api/requests/{id}/process-proforma/` | Process existing proforma | Staff/Finance |
 | `GET` | `/api/requests/dashboard-stats/` | Get dashboard statistics | Authenticated |
+| `GET` | `/api/vendors/` | List vendors (auto-populated from AI-extracted proformas), with request count and total spend | Authenticated |
+| `GET` | `/api/vendors/{id}/` | Get a single vendor's details | Authenticated |
 | `POST` | `/api/documents/process/` | Process document | Authenticated |
 | `GET` | `/api/finance/documents/` | List financial documents | Finance |
 | `POST` | `/api/finance/documents/` | Upload financial document | Finance |
 | `GET` | `/api/finance/documents/export_financial_report/` | Export financial report CSV | Finance |
-| `GET` | `/api/finance/alerts/` | List compliance alerts | Finance/Approvers |
+| `GET` | `/api/finance/alerts/` | List compliance alerts (including `budget_exceeded`) | Finance/Approvers |
 | `POST` | `/api/finance/alerts/generate_alerts/` | Generate compliance alerts | Finance |
 | `GET` | `/api/finance/alerts/dashboard_stats/` | Get finance dashboard stats | Finance |
 | `PATCH` | `/api/finance/alerts/{id}/resolve/` | Resolve compliance alert | Finance/Approvers |
+| `GET` | `/api/finance/budgets/` | List department monthly budgets | Finance |
+| `POST` | `/api/finance/budgets/` | Set a department's monthly budget | Finance |
+| `PATCH` | `/api/finance/budgets/{id}/` | Update a department's budget | Finance |
+| `DELETE` | `/api/finance/budgets/{id}/` | Delete a department's budget | Finance |
+| `GET` | `/api/finance/budgets/status_report/` | Spend vs. budget for every department | Finance |
 
 **📖 Complete API Documentation**: [API_DOCUMENTATION.md](API_DOCUMENTATION.md)  
 **🔧 Swagger Documentation**: [SWAGGER_ENDPOINTS.md](SWAGGER_ENDPOINTS.md)
@@ -203,9 +229,11 @@ python3 test_api.py
 | Role | Permissions |
 |------|-------------|
 | **👤 Staff** | • Create purchase requests<br>• View own requests<br>• Submit receipts<br>• Upload proformas |
-| **✅ Approver Level 1** | • Review pending requests<br>• Approve/reject requests<br>• View request history |
-| **✅ Approver Level 2** | • Final approval authority<br>• Review Level 1 approved requests<br>• Generate purchase orders |
-| **💰 Finance** | • View all requests<br>• Export request data<br>• Access financial reports<br>• Upload financial documents<br>• Monitor budget compliance |
+| **✅ Approver Level 1** | • Review pending requests<br>• Approve/reject requests<br>• View request history<br>• View vendor directory |
+| **✅ Approver Level 2** | • Final approval authority<br>• Review Level 1 approved requests<br>• Generate purchase orders<br>• View vendor directory |
+| **💰 Finance** | • View all requests<br>• Search/filter/paginate requests<br>• Export request data<br>• Access financial reports<br>• Upload financial documents<br>• View vendor directory<br>• Set and monitor department budgets<br>• Monitor budget compliance |
+
+All roles may optionally enable 2FA on their own account from the Profile page.
 
 ## 🔄 Approval Workflow
 
@@ -392,9 +420,9 @@ python3 VALIDATE_BUILD.py
 ## 🔧 Interactive API Testing
 
 ### Local Development
-- **Swagger UI**: http://localhost:8000/swagger/ - Interactive API documentation
-- **ReDoc**: http://localhost:8000/redoc/ - Clean API documentation
-- **JSON Schema**: http://localhost:8000/swagger.json - OpenAPI specification
+- **Swagger UI**: http://localhost:8000/api/docs/ - Interactive API documentation
+- **ReDoc**: http://localhost:8000/api/redoc/ - Clean API documentation
+- **JSON Schema**: http://localhost:8000/api/schema/ - OpenAPI specification
 
 ### Production
 - **Swagger UI**: https://procure-to-pay-backend.fly.dev/api/docs/ - Interactive API documentation
@@ -402,6 +430,17 @@ python3 VALIDATE_BUILD.py
 - **JSON Schema**: https://procure-to-pay-backend.fly.dev/api/schema/ - OpenAPI specification
 
 ## 🔧 Recent Updates
+
+### 🆕 **Vendor Directory, Budget Tracking, 2FA & Search**
+- **Vendor Directory**: Vendors are automatically captured from AI-extracted proforma data, with per-vendor request count and total spend (`/api/vendors/`)
+- **Department Budgets**: Finance can set a monthly spend limit per department, see real-time spend-vs-budget, and get automatic `budget_exceeded` compliance alerts (`/api/finance/budgets/`)
+- **Two-Factor Authentication**: Optional TOTP-based 2FA (any authenticator app, no external provider needed) — set up from the Profile page, enforced on login (`/api/auth/2fa/*`)
+- **Search, Filter & Pagination**: The Finance requests table and Approvals queue now support live search and status filtering, backed by real server-side pagination
+- **Dashboard Trend Charts**: Added a real line chart for monthly request activity (previously a fabricated split of the total), plus average approval turnaround and top-vendor stats on the Finance dashboard
+- **Fixed Rejection Reasons**: Approver rejection comments were silently dropped due to a frontend/backend field-name mismatch — now persisted and shown in the approval timeline
+- **Fixed Misleading AI Confidence**: The non-AI text-extraction fallback no longer reports a false 90% confidence score
+- **Monochrome Documents Panel**: The Proforma/Purchase Order/Receipt panel on the request detail page now matches the site's black-and-white design system
+- **Higher Request Amount Limit**: Raised from 1,000,000 RWF to 999,999,999,999.99 RWF
 
 ### 🎆 **Latest Improvements**
 - **New Finance APIs**: Added comprehensive finance endpoints for document management and compliance alerts

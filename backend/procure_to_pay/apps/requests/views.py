@@ -10,12 +10,35 @@ from rest_framework.permissions import IsAuthenticated
 from django.db import transaction
 from django.core.exceptions import ValidationError
 from drf_spectacular.utils import extend_schema, extend_schema_view
-from .models import PurchaseRequest, Approval, RequestItem
-from .serializers import PurchaseRequestSerializer, RequestItemSerializer
+from django.db.models import Count, Sum, Max
+from rest_framework.viewsets import ReadOnlyModelViewSet
+from .models import PurchaseRequest, Approval, RequestItem, Vendor
+from .serializers import PurchaseRequestSerializer, RequestItemSerializer, VendorSerializer
 from .permissions import CanCreateRequest, CanApproveRequest, CanUpdateRequest, CanDeleteRequest
+from .filters import PurchaseRequestFilter
 from ..documents.services import DocumentProcessor
 
 logger = logging.getLogger(__name__)
+
+
+@extend_schema_view(
+    list=extend_schema(description="List vendors extracted from processed proforma invoices, with request count and total spend", tags=['Vendors']),
+    retrieve=extend_schema(description="Get a single vendor's details", tags=['Vendors']),
+)
+class VendorViewSet(ReadOnlyModelViewSet):
+    """Read-only vendor directory, aggregated from AI-extracted proforma vendor names."""
+    serializer_class = VendorSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        if getattr(self, 'swagger_fake_view', False):
+            return Vendor.objects.none()
+        return Vendor.objects.annotate(
+            request_count=Count('requests'),
+            total_spend=Sum('requests__amount'),
+            last_request_at=Max('requests__created_at'),
+        ).order_by('-total_spend')
+
 
 @extend_schema_view(
     list=extend_schema(description="List purchase requests (filtered by user role)", tags=['Purchase Requests']),
@@ -27,7 +50,10 @@ logger = logging.getLogger(__name__)
 class PurchaseRequestViewSet(ModelViewSet):
     serializer_class = PurchaseRequestSerializer
     permission_classes = [IsAuthenticated]
-    
+    filterset_class = PurchaseRequestFilter
+    ordering_fields = ['created_at', 'amount', 'status']
+    ordering = ['-created_at']
+
     def get_queryset(self):
         # Handle swagger documentation generation
         if getattr(self, 'swagger_fake_view', False):
@@ -351,7 +377,12 @@ class PurchaseRequestViewSet(ModelViewSet):
             
             # Update proforma data
             purchase_request.proforma_data = proforma_data
-            
+
+            vendor_name = (proforma_data.get('vendor') or '').strip()
+            if vendor_name and vendor_name.lower() not in ('unknown vendor', 'unknown'):
+                vendor, _ = Vendor.objects.get_or_create(name__iexact=vendor_name, defaults={'name': vendor_name})
+                purchase_request.vendor = vendor
+
             # Clear existing items and create new ones
             purchase_request.items.all().delete()
             

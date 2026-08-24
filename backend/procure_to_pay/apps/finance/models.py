@@ -26,6 +26,20 @@ class FinancialDocument(models.Model):
     class Meta:
         ordering = ['-uploaded_at']
 
+class Budget(models.Model):
+    """A monthly spend limit for a department. `department` is matched by string
+    equality against User.department, which is itself free text (no FK)."""
+    department = models.CharField(max_length=100, unique=True)
+    monthly_limit = models.DecimalField(max_digits=15, decimal_places=2)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['department']
+
+    def __str__(self):
+        return f"{self.department} (RWF {self.monthly_limit:,}/mo)"
+
 class ComplianceAlert(models.Model):
     ALERT_TYPES = [
         ('high_value', 'High Value Request'),

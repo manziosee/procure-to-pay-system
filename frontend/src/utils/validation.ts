@@ -65,8 +65,8 @@ export const validateAmount = (amount: string | number): string | null => {
   if (isNaN(numAmount) || numAmount <= 0) {
     return 'Amount must be a positive number';
   }
-  if (numAmount > 1000000) {
-    return 'Amount cannot exceed 1,000,000';
+  if (numAmount > 999999999999.99) {
+    return 'Amount cannot exceed 999,999,999,999.99';
   }
   
   return null;

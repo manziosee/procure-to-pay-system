@@ -2,16 +2,10 @@
 .env
 .env.local
 .env.production
-<<<<<<< Updated upstream
 .env.render
-.env.docker
-*.env
-=======
 .env.fly
 .env.docker
 *.env
-.
->>>>>>> Stashed changes
 
 # API Keys and secrets - NEVER COMMIT THESE
 **/OPENAI_API_KEY*
@@ -19,6 +13,11 @@
 **/*secret*
 **/SECRET_KEY*
 **/DATABASE_URL*
+
+# Django migrations are generated source code, not secrets - the broad *secret*
+# pattern above would otherwise silently swallow a migration for any field whose
+# name contains "secret" (e.g. totp_secret), never committing it.
+!**/migrations/*.py
 
 # Logs
 *.log

@@ -11,6 +11,7 @@ import EditRequest from './pages/EditRequest';
 import RequestDetail from './pages/RequestDetail';
 import Approvals from './pages/Approvals';
 import FinanceDashboard from './pages/FinanceDashboard';
+import Vendors from './pages/Vendors';
 import Profile from './pages/Profile';
 import TestLanding from './pages/TestLanding';
 import Unauthorized from './pages/Unauthorized';
@@ -120,7 +121,12 @@ function App() {
             <Route element={<RoleBasedRoute allowedRoles={['finance']} redirectTo="/unauthorized" />}>
               <Route path="/finance" element={<FinanceDashboard />} />
             </Route>
-            
+
+            {/* Vendor Directory - Finance and Approvers */}
+            <Route element={<RoleBasedRoute allowedRoles={['finance', 'approver_level_1', 'approver_level_2']} redirectTo="/unauthorized" />}>
+              <Route path="/vendors" element={<Vendors />} />
+            </Route>
+
             {/* Common Routes - Accessible to all authenticated users */}
             <Route path="/requests/:id" element={<RequestDetail />} />
             <Route path="/profile" element={<Profile />} />

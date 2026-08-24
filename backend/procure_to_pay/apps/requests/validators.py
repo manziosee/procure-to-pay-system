@@ -72,8 +72,8 @@ def validate_amount(value):
     """Validate purchase amount"""
     if value <= 0:
         raise ValidationError('Amount must be greater than zero')
-    if value > 1000000:  # 1M limit
-        raise ValidationError('Amount cannot exceed 1,000,000')
+    if value > 999999999999.99:
+        raise ValidationError('Amount cannot exceed 999,999,999,999.99')
 
 def validate_title(value):
     """Validate title for XSS prevention"""

@@ -3,10 +3,23 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import type { User, LoginCredentials } from '@/types';
 import { auth as authAPI, getAccessToken } from '@/services/api';
 
+// Thrown by login() when the account has 2FA enabled, instead of completing the
+// login. Carries the short-lived challenge that verifyTwoFactor() needs.
+export class RequiresTwoFactorError extends Error {
+  challenge: string;
+  constructor(challenge: string) {
+    super('Two-factor authentication code required');
+    this.name = 'RequiresTwoFactorError';
+    this.challenge = challenge;
+  }
+}
+
 interface AuthContextType {
   user: User | null;
   login: (credentials: LoginCredentials) => Promise<User>;
+  verifyTwoFactor: (challenge: string, code: string) => Promise<User>;
   logout: () => Promise<void>;
+  refreshUser: () => Promise<void>;
   loading: boolean;
 }
 
@@ -82,21 +95,50 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
   }, [user]);
 
+  const finishLogin = (userData: User): User => {
+    localStorage.setItem('currentUser', JSON.stringify(userData));
+    localStorage.setItem('loginTime', Date.now().toString());
+    setUser(userData);
+    return userData;
+  };
+
   const login = async (credentials: LoginCredentials): Promise<User> => {
+    let response;
     try {
-      const response = await authAPI.login({
+      response = await authAPI.login({
         email: credentials.email,
         password: credentials.password
       });
-      
-      const userData = response.user;
-      localStorage.setItem('currentUser', JSON.stringify(userData));
-      localStorage.setItem('loginTime', Date.now().toString());
-      setUser(userData);
-      return userData;
     } catch (error) {
       console.error('Login error:', error);
       throw new Error('Invalid credentials');
+    }
+
+    if (response.requires_2fa) {
+      throw new RequiresTwoFactorError(response.challenge);
+    }
+
+    return finishLogin(response.user);
+  };
+
+  const verifyTwoFactor = async (challenge: string, code: string): Promise<User> => {
+    try {
+      const response = await authAPI.verifyTwoFactor(challenge, code);
+      return finishLogin(response.user);
+    } catch (error) {
+      console.error('2FA verification error:', error);
+      throw new Error('Invalid code');
+    }
+  };
+
+  // Re-fetches the current user (e.g. after enabling/disabling 2FA) and updates
+  // both state and the locally cached copy used to restore the session on reload.
+  const refreshUser = async () => {
+    try {
+      const response = await authAPI.getProfile();
+      finishLogin(response.data);
+    } catch (error) {
+      console.error('Error refreshing user:', error);
     }
   };
 
@@ -115,7 +157,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const value = {
     user,
     login,
+    verifyTwoFactor,
     logout,
+    refreshUser,
     loading
   };
 

@@ -7,23 +7,34 @@ from .validators import (
     validate_amount, validate_title, validate_description
 )
 
+class Vendor(models.Model):
+    name = models.CharField(max_length=200, unique=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['name']
+
+    def __str__(self):
+        return self.name
+
 class PurchaseRequest(models.Model):
     STATUS_CHOICES = [
         ('pending', 'Pending'),
         ('approved', 'Approved'),
         ('rejected', 'Rejected'),
     ]
-    
+
     title = models.CharField(max_length=200, validators=[validate_title])
     description = models.TextField(validators=[validate_description])
     amount = models.DecimalField(
-        max_digits=10, decimal_places=2, 
+        max_digits=15, decimal_places=2,
         validators=[MinValueValidator(0), validate_amount]
     )
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='pending')
     
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='created_requests')
     approved_by = models.ManyToManyField(settings.AUTH_USER_MODEL, through='Approval', related_name='approved_requests')
+    vendor = models.ForeignKey(Vendor, null=True, blank=True, on_delete=models.SET_NULL, related_name='requests')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     
@@ -84,8 +95,8 @@ class RequestItem(models.Model):
     name = models.CharField(max_length=200)
     description = models.TextField(blank=True)
     quantity = models.PositiveIntegerField(default=1)
-    unit_price = models.DecimalField(max_digits=10, decimal_places=2, validators=[MinValueValidator(0)])
-    total_price = models.DecimalField(max_digits=10, decimal_places=2, validators=[MinValueValidator(0)])
+    unit_price = models.DecimalField(max_digits=15, decimal_places=2, validators=[MinValueValidator(0)])
+    total_price = models.DecimalField(max_digits=15, decimal_places=2, validators=[MinValueValidator(0)])
     
     def save(self, *args, **kwargs):
         self.total_price = self.quantity * self.unit_price

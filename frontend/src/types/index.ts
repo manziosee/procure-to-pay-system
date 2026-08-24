@@ -8,6 +8,7 @@ export interface User {
   last_name: string;
   role: UserRole;
   department: string;
+  totp_enabled: boolean;
 }
 
 export interface PurchaseRequest {
@@ -60,4 +61,28 @@ export interface RequestFilters {
   search?: string;
   sort?: string;
   order?: 'asc' | 'desc';
+}
+
+export interface Vendor {
+  id: number;
+  name: string;
+  created_at: string;
+  request_count: number;
+  total_spend: string | null;
+  last_request_at: string | null;
+}
+
+export interface Budget {
+  id: number;
+  department: string;
+  monthly_limit: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface BudgetStatus {
+  department: string;
+  monthly_limit: number;
+  spent: number;
+  percentage_used: number;
 }
