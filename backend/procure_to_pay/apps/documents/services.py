@@ -20,8 +20,11 @@ from io import BytesIO
 
 logger = logging.getLogger(__name__)
 
-# Fast, strong general-purpose Groq model - good at structured JSON extraction.
-GROQ_MODEL = "llama-3.3-70b-versatile"
+# OpenAI's open-weight model hosted on Groq's infrastructure - verified against a real
+# test invoice: correctly picks the final total (not subtotal) and extracts clean item
+# names/quantities/prices. (Groq's model catalog changes over time - if this 404s, run
+# client.models.list() to see what's currently available and swap it out.)
+GROQ_MODEL = "openai/gpt-oss-120b"
 
 class ErrorLogger:
     @staticmethod
